@@ -31,3 +31,10 @@ Os critérios de destaque (≥180 mg/dL e diferença >30 mg/dL) são apenas regr
 
 ## Atualização da versão
 A versão atual adiciona carregamento automático ao selecionar a data e salvamento automático das medições principais e extras válidas.
+
+
+## Versão 3.0
+- Identificação visível da versão no cabeçalho.
+- Salvamento automático das medições principais ao digitar e ao alterar o campo.
+- Carregamento automático dos registros ao selecionar outra data.
+- Service worker atualizado para invalidar o cache das versões anteriores.
