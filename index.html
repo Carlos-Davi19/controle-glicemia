@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#146b5b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Glicemia">
+<link rel="manifest" href="manifest.json">
+<title>Controle de Glicemia</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172b27;background:#f4f7f6;--green:#146b5b;--line:#d7e2de}
+*{box-sizing:border-box}body{margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);background:#f4f7f6}
+header{background:var(--green);color:white;padding:18px 16px 16px;position:sticky;top:0;z-index:3}
+header h1{font-size:22px;margin:0 0 5px}header p{font-size:13px;margin:0;opacity:.9}
+main{max-width:760px;margin:auto;padding:14px 12px 36px}.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:13px;box-shadow:0 2px 8px #143a2c0a}
+h2{font-size:17px;margin:0 0 12px}.datebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input,select,textarea,button{font:inherit}input,select,textarea{border:1px solid #b8cbc4;border-radius:9px;padding:10px;background:white;color:#172b27;min-width:0}
+input[type=date]{flex:1}button{border:0;border-radius:9px;padding:11px 13px;background:var(--green);color:white;font-weight:600;cursor:pointer}
+button.secondary{background:#e5efeb;color:#17483d}button.danger{background:#a93333}button:disabled{opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.measure{border:1px solid var(--line);border-radius:11px;padding:10px;background:#fbfdfc}
+.measure label{display:block;font-size:13px;font-weight:650;margin-bottom:7px}
+.measure input{width:100%;font-size:20px;font-weight:600}
+.measure small{display:block;color:#60756d;margin-top:5px;font-size:11px}
+.measure.alert{background:#fff0ef;border-color:#d94b43}.measure.alert input{color:#a92323}
+.measure.warn{background:#fff8e6;border-color:#e0a329}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1}
+.note{font-size:12px;color:#60756d;line-height:1.45}
+.status{font-size:13px;margin-top:9px;min-height:18px;color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{border:1px solid #c9d8d2;padding:7px 5px;text-align:center}th{background:#e9f1ee}
+.tablewrap{overflow-x:auto}
+.flag{background:#ffe3e0;color:#9c1d1d;font-weight:700}
+nav{display:flex;gap:8px;margin-bottom:12px}nav button{flex:1}
+.hidden{display:none!important}
+.extra-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:7px;margin:8px 0}
+.extra-row input{width:100%}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media print{header,nav,.no-print,.actions,button{display:none!important}body{background:white}.panel{box-shadow:none;border:0;padding:0}.tablewrap{overflow:visible}table{font-size:10px}main{max-width:none;padding:0}}
+</style>
+</head>
+<body>
+<header><h1>Controle de Glicemia</h1><p>Registro pessoal • valores em mg/dL</p></header>
+<main>
+<nav class="no-print">
+<button id="tabDaily" class="secondary">Registro diário</button>
+<button id="tabMonth" class="secondary">Relatório mensal</button>
+</nav>
+<section id="daily">
+<div class="panel">
+<h2>Data do registro</h2>
+<div class="datebar"><input type="date" id="recordDate"><button id="loadDate" class="secondary">Carregar</button></div>
+<p class="note">Informe os valores das seis medições principais. O horário do registro será guardado automaticamente quando você salvar.</p>
+</div>
+<div class="panel">
+<h2>Medições principais</h2>
+<div class="grid" id="mainMeasurements"></div>
+<div id="comparisons" class="note" style="margin-top:12px"></div>
+<div class="actions no-print"><button id="save">Salvar medições</button><button id="clear" class="secondary">Limpar campos</button></div>
+<div id="saveStatus" class="status" role="status"></div>
+</div>
+<div class="panel">
+<h2>Outras medições</h2>
+<p class="note">Use para registrar valores em horários adicionais. Data e horário serão salvos no registro.</p>
+<div id="extras"></div>
+<div class="actions no-print"><button id="addExtra" class="secondary">+ Adicionar medição</button></div>
+</div>
+<div class="panel">
+<h2>Registros desta data</h2><div id="dayRecords" class="tablewrap"></div>
+</div>
+</section>
+<section id="monthly" class="hidden">
+<div class="panel">
+<h2>Relatório mensal</h2>
+<div class="datebar no-print"><input type="month" id="monthPicker"><button id="showMonth">Consultar</button><button id="printMonth" class="secondary">Imprimir / PDF</button></div>
+<p class="note">No iPhone, use Compartilhar/Imprimir no menu do Safari ou escolha “Salvar em Arquivos” no diálogo de impressão.</p>
+<div id="monthSummary"></div><div id="monthTable" class="tablewrap"></div>
+</div>
+</section>
+<div class="panel note">
+<strong>Privacidade:</strong> nesta versão, os registros ficam armazenados neste navegador, neste aparelho. Não há conta nem envio de medições para servidor. Evite apagar os dados do site sem antes exportar/ imprimir o relatório.
+<br><br><strong>Atenção:</strong> os destaques são critérios de organização configurados por você (≥180 mg/dL e diferença absoluta &gt;30 mg/dL). Não representam diagnóstico nem substituem orientações do profissional de saúde.
+<div class="actions no-print"><button id="backup" class="secondary">Exportar backup JSON</button><label class="secondary" style="display:inline-flex;align-items:center;padding:11px 13px;border-radius:9px;background:#e5efeb;color:#17483d;font-weight:600;cursor:pointer">Importar backup<input id="restore" type="file" accept=".json,application/json" hidden></label></div>
+</div>
+</main>
+<script>
+const labels=[
+["Antes do café","posCafe","café da manhã"],
+["2h após o café","antesAlmoco","café da manhã"],
+["Antes do almoço","posAlmoco","almoço"],
+["2h após o almoço","antesJantar","almoço"],
+["Antes do jantar","posJantar","jantar"],
+["2h após o jantar","", "jantar"]
+];
+const fields=[
+{id:"antesCafe",label:"Antes do café"},
+{id:"posCafe",label:"2h após o café"},
+{id:"antesAlmoco",label:"Antes do almoço"},
+{id:"posAlmoco",label:"2h após o almoço"},
+{id:"antesJantar",label:"Antes do jantar"},
+{id:"posJantar",label:"2h após o jantar"}
+];
+const KEY="controleGlicemia.v1";
+let db=loadDb(), extrasDraft=[];
+const $=id=>document.getElementById(id);
+function loadDb(){try{return JSON.parse(localStorage.getItem(KEY)||'{"days":{},"extras":[]}')}catch{return {days:{},extras:[]}}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(db))}
+function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function fmtDate(s){if(!s)return "";let [y,m,d]=s.split("-");return `${d}/${m}/${y}`}
+function valueNum(v){if(v===null||v===undefined||v==="")return null;let n=Number(v);return Number.isFinite(n)&&n>=0?n:null}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function mainValues(){let out={};fields.forEach(f=>out[f.id]=valueNum($(f.id).value));return out}
+function renderInputs(){ $("mainMeasurements").innerHTML=fields.map(f=>`<div class="measure" id="card-${f.id}"><label for="${f.id}">${f.label}</label><input type="number" min="0" step="1" inputmode="numeric" id="${f.id}" placeholder="mg/dL"><small>Alerta visual a partir de 180</small></div>`).join("");fields.forEach(f=>$(f.id).addEventListener("input",renderComparisons))}
+function renderComparisons(){
+ fields.forEach(f=>{let n=valueNum($(f.id).value);$("card-"+f.id).classList.toggle("alert",n!==null&&n>=180)});
+ const pairs=[["antesCafe","posCafe","Café"],["antesAlmoco","posAlmoco","Almoço"],["antesJantar","posJantar","Jantar"]];
+ $("comparisons").innerHTML=pairs.map(([a,b,n])=>{let x=valueNum($(a).value),y=valueNum($(b).value);if(x===null||y===null)return `<div>${n}: preencha as duas medições para comparar.</div>`;let diff=y-x;return `<div class="${Math.abs(diff)>30?"flag":""}" style="padding:5px;margin-top:3px;border-radius:5px">${n}: ${diff>0?"+":""}${diff} mg/dL ${Math.abs(diff)>30?"— variação superior a 30": "— variação até 30"}</div>`}).join("");
+}
+function getDay(date){return db.days[date]||Object.fromEntries(fields.map(f=>[f.id,null]))}
+function saveMain(){
+ const date=$("recordDate").value;if(!date)return;
+ const vals=mainValues();db.days[date]={...getDay(date),...vals,updatedAt:new Date().toISOString()};
+ persist();$("saveStatus").textContent="Medições salvas em "+fmtDate(date)+".";
+ renderDayRecords();renderMonthly();
+}
+function loadDay(date){
+ $("recordDate").value=date;const data=getDay(date);fields.forEach(f=>$(f.id).value=data[f.id]??"");extrasDraft=[];
+ $("extras").innerHTML="";renderComparisons();renderDayRecords();
+}
+function renderExtras(){
+ $("extras").innerHTML=extrasDraft.map((x,i)=>`<div class="extra-row"><input type="time" aria-label="Horário" value="${esc(x.time)}" data-i="${i}" data-k="time"><input type="number" min="0" step="1" inputmode="numeric" placeholder="mg/dL" value="${esc(x.value)}" data-i="${i}" data-k="value"><input type="text" placeholder="Observação" value="${esc(x.note)}" data-i="${i}" data-k="note"><button class="danger" data-remove="${i}" aria-label="Excluir">×</button></div>`).join("");
+ $("extras").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{let i=+el.dataset.i,k=el.dataset.k;extrasDraft[i][k]=el.value}));
+ $("extras").querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{extrasDraft.splice(+b.dataset.remove,1);renderExtras()}));
+}
+function saveExtra(){
+ const date=$("recordDate").value;if(!date)return;
+ let valid=extrasDraft.filter(x=>valueNum(x.value)!==null&&x.time);
+ valid.forEach(x=>db.extras.push({id:crypto.randomUUID(),date,time:x.time,value:valueNum(x.value),note:x.note||"",createdAt:new Date().toISOString()}));
+ persist();extrasDraft=[];renderExtras();renderDayRecords();renderMonthly();
+ $("saveStatus").textContent=valid.length?`${valid.length} medição(ões) adicional(is) salva(s).`:"Nenhuma medição adicional válida para salvar.";
+}
+function renderDayRecords(){
+ const date=$("recordDate").value;const d=getDay(date);
+ let rows=fields.map(f=>[f.label,d[f.id]]).filter(r=>r[1]!==null&&r[1]!==undefined).map(r=>`<tr><td>${esc(r[0])}</td><td class="${r[1]>=180?'flag':''}">${r[1]}</td><td>Principal</td></tr>`);
+ db.extras.filter(x=>x.date===date).sort((a,b)=>a.time.localeCompare(b.time)).forEach(x=>rows.push(`<tr><td>${esc(x.time)} ${esc(x.note)}</td><td class="${x.value>=180?'flag':''}">${x.value}</td><td>Adicional</td></tr>`));
+ $("dayRecords").innerHTML=rows.length?`<table><thead><tr><th>Medição / horário</th><th>mg/dL</th><th>Tipo</th></tr></thead><tbody>${rows.join("")}</tbody></table>`:"<p class='note'>Nenhuma medição salva nesta data.</p>";
+}
+function renderMonthly(){
+ const month=$("monthPicker").value;if(!month)return;
+ let dates=Object.keys(db.days).filter(d=>d.startsWith(month)).sort();
+ const ex=db.extras.filter(x=>x.date.startsWith(month));
+ const countMain=dates.reduce((n,d)=>n+fields.filter(f=>db.days[d][f.id]!==null&&db.days[d][f.id]!==undefined).length,0);
+ const countAlerts=dates.reduce((n,d)=>n+fields.filter(f=>valueNum(db.days[d][f.id])>=180).length,0)+ex.filter(x=>x.value>=180).length;
+ $("monthSummary").innerHTML=`<p><strong>${dates.length}</strong> dias com registros principais • <strong>${countMain+ex.length}</strong> medições registradas • <strong>${countAlerts}</strong> valores ≥180 mg/dL destacados</p>`;
+ const heads=fields.map(f=>`<th>${f.label}</th>`).join("");
+ const rows=dates.map(date=>{let d=db.days[date];return `<tr><td>${fmtDate(date)}</td>${fields.map(f=>{let v=valueNum(d[f.id]);return `<td class="${v!==null&&v>=180?'flag':''}">${v??'—'}</td>`}).join("")}</tr>`}).join("");
+ const extrasRows=ex.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(x=>`<tr><td>${fmtDate(x.date)} ${esc(x.time)}</td><td colspan="6" style="text-align:left" class="${x.value>=180?'flag':''}">${x.value} mg/dL — ${esc(x.note||"Medição adicional")}</td></tr>`).join("");
+ $("monthTable").innerHTML=`<table><thead><tr><th>Data</th>${heads}</tr></thead><tbody>${rows||`<tr><td colspan="7">Sem registros neste mês.</td></tr>`}${extrasRows}</tbody></table>`;
+}
+$("save").addEventListener("click",()=>{saveMain();saveExtra()});
+$("clear").addEventListener("click",()=>{fields.forEach(f=>$(f.id).value="");extrasDraft=[];renderExtras();renderComparisons();$("saveStatus").textContent="Campos limpos. Os dados já salvos não foram apagados."});
+$("addExtra").addEventListener("click",()=>{extrasDraft.push({time:new Date().toTimeString().slice(0,5),value:"",note:""});renderExtras()});
+$("loadDate").addEventListener("click",()=>loadDay($("recordDate").value));
+$("tabDaily").addEventListener("click",()=>{$("daily").classList.remove("hidden");$("monthly").classList.add("hidden")});
+$("tabMonth").addEventListener("click",()=>{$("monthly").classList.remove("hidden");$("daily").classList.add("hidden");renderMonthly()});
+$("showMonth").addEventListener("click",renderMonthly);
+$("printMonth").addEventListener("click",()=>window.print());
+$("backup").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup-glicemia-"+today()+".json";a.click();URL.revokeObjectURL(a.href)});
+$("restore").addEventListener("change",async e=>{let f=e.target.files[0];if(!f)return;try{let imported=JSON.parse(await f.text());if(!imported.days||!imported.extras)throw Error("Formato inválido");if(!confirm("Importar backup? Os dados atuais serão substituídos."))return;db=imported;persist();loadDay($("recordDate").value);renderMonthly();alert("Backup importado.")}catch{alert("Não foi possível importar esse arquivo.")}e.target.value=""});
+$("recordDate").value=today();$("monthPicker").value=today().slice(0,7);renderInputs();renderExtras();loadDay(today());renderMonthly();
+if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body></html>
