@@ -1,7 +1,7 @@
 # Controle de Glicemia — versão inicial
 
 ## O que esta versão faz
-- Registra as seis medições principais por data.
+- Registra e salva automaticamente as seis medições principais por data.
 - Registra medições adicionais com horário e observação.
 - Destaca valores iguais ou superiores a 180 mg/dL.
 - Destaca diferenças absolutas superiores a 30 mg/dL entre antes e 2h após café, almoço e jantar.
@@ -22,9 +22,12 @@ Esta é uma versão inicial de aplicativo web instalável (PWA), não um aplicat
 ## Como usar
 - Preencha a data e as medições.
 - Toque em “Salvar medições”.
-- Para medições extras, toque em “+ Adicionar medição”, preencha horário, valor e observação, depois toque em “Salvar medições”.
+- Para medições extras, toque em “+ Adicionar medição”, preencha horário, valor e observação. Horário e valor válidos são salvos automaticamente.
 - Abra “Relatório mensal”, escolha o mês e toque em “Imprimir / PDF”.
 - Use “Exportar backup JSON” para guardar uma cópia dos dados.
 
 ## Aviso
 Os critérios de destaque (≥180 mg/dL e diferença >30 mg/dL) são apenas regras visuais solicitadas para organização. Não constituem diagnóstico nem recomendação clínica.
+
+## Atualização da versão
+A versão atual adiciona carregamento automático ao selecionar a data e salvamento automático das medições principais e extras válidas.

@@ -51,7 +51,7 @@ nav{display:flex;gap:8px;margin-bottom:12px}nav button{flex:1}
 <div class="panel">
 <h2>Data do registro</h2>
 <div class="datebar"><input type="date" id="recordDate"><button id="loadDate" class="secondary">Carregar</button></div>
-<p class="note">Informe os valores das seis medições principais. O horário do registro será guardado automaticamente quando você salvar.</p>
+<p class="note">As medições principais são salvas automaticamente ao preencher. Selecione outra data para carregar os dados dela.</p>
 </div>
 <div class="panel">
 <h2>Medições principais</h2>
@@ -111,7 +111,17 @@ function fmtDate(s){if(!s)return "";let [y,m,d]=s.split("-");return `${d}/${m}/$
 function valueNum(v){if(v===null||v===undefined||v==="")return null;let n=Number(v);return Number.isFinite(n)&&n>=0?n:null}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function mainValues(){let out={};fields.forEach(f=>out[f.id]=valueNum($(f.id).value));return out}
-function renderInputs(){ $("mainMeasurements").innerHTML=fields.map(f=>`<div class="measure" id="card-${f.id}"><label for="${f.id}">${f.label}</label><input type="number" min="0" step="1" inputmode="numeric" id="${f.id}" placeholder="mg/dL"><small>Alerta visual a partir de 180</small></div>`).join("");fields.forEach(f=>$(f.id).addEventListener("input",renderComparisons))}
+function renderInputs(){ $("mainMeasurements").innerHTML=fields.map(f=>`<div class="measure" id="card-${f.id}"><label for="${f.id}">${f.label}</label><input type="number" min="0" step="1" inputmode="numeric" id="${f.id}" placeholder="mg/dL"><small>Alerta visual a partir de 180</small></div>`).join("");fields.forEach(f=>$(f.id).addEventListener("input",()=>{
+  renderComparisons();
+  const date=$("recordDate").value;
+  if(date){
+    db.days[date]={...getDay(date),...mainValues(),updatedAt:new Date().toISOString()};
+    persist();
+    $("saveStatus").textContent="Salvamento automático realizado.";
+    renderDayRecords();
+    renderMonthly();
+  }
+}))}
 function renderComparisons(){
  fields.forEach(f=>{let n=valueNum($(f.id).value);$("card-"+f.id).classList.toggle("alert",n!==null&&n>=180)});
  const pairs=[["antesCafe","posCafe","Café"],["antesAlmoco","posAlmoco","Almoço"],["antesJantar","posJantar","Jantar"]];
@@ -130,12 +140,24 @@ function loadDay(date){
 }
 function renderExtras(){
  $("extras").innerHTML=extrasDraft.map((x,i)=>`<div class="extra-row"><input type="time" aria-label="Horário" value="${esc(x.time)}" data-i="${i}" data-k="time"><input type="number" min="0" step="1" inputmode="numeric" placeholder="mg/dL" value="${esc(x.value)}" data-i="${i}" data-k="value"><input type="text" placeholder="Observação" value="${esc(x.note)}" data-i="${i}" data-k="note"><button class="danger" data-remove="${i}" aria-label="Excluir">×</button></div>`).join("");
- $("extras").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{let i=+el.dataset.i,k=el.dataset.k;extrasDraft[i][k]=el.value}));
- $("extras").querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{extrasDraft.splice(+b.dataset.remove,1);renderExtras()}));
+ $("extras").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{let i=+el.dataset.i,k=el.dataset.k;extrasDraft[i][k]=el.value;
+  if(k==="value"||k==="time"){
+    const date=$("recordDate").value;
+    if(date && extrasDraft[i].time && valueNum(extrasDraft[i].value)!==null){
+      db.extras=db.extras.filter(x=>!(x.date===date&&x.draftId===extrasDraft[i].draftId));
+      db.extras.push({id:extrasDraft[i].draftId||crypto.randomUUID(),draftId:extrasDraft[i].draftId||crypto.randomUUID(),date,time:extrasDraft[i].time,value:valueNum(extrasDraft[i].value),note:extrasDraft[i].note||"",createdAt:new Date().toISOString()});
+      extrasDraft[i].draftId=db.extras[db.extras.length-1].draftId;
+      persist();renderDayRecords();renderMonthly();
+    }
+  }
+}));
+ $("extras").querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{const item=extrasDraft[+b.dataset.remove];
+ if(item?.draftId){db.extras=db.extras.filter(x=>x.draftId!==item.draftId);persist();renderDayRecords();renderMonthly();}
+ extrasDraft.splice(+b.dataset.remove,1);renderExtras()}));
 }
 function saveExtra(){
  const date=$("recordDate").value;if(!date)return;
- let valid=extrasDraft.filter(x=>valueNum(x.value)!==null&&x.time);
+ let valid=extrasDraft.filter(x=>valueNum(x.value)!==null&&x.time&&!db.extras.some(e=>e.draftId===x.draftId));
  valid.forEach(x=>db.extras.push({id:crypto.randomUUID(),date,time:x.time,value:valueNum(x.value),note:x.note||"",createdAt:new Date().toISOString()}));
  persist();extrasDraft=[];renderExtras();renderDayRecords();renderMonthly();
  $("saveStatus").textContent=valid.length?`${valid.length} medição(ões) adicional(is) salva(s).`:"Nenhuma medição adicional válida para salvar.";
@@ -160,8 +182,9 @@ function renderMonthly(){
 }
 $("save").addEventListener("click",()=>{saveMain();saveExtra()});
 $("clear").addEventListener("click",()=>{fields.forEach(f=>$(f.id).value="");extrasDraft=[];renderExtras();renderComparisons();$("saveStatus").textContent="Campos limpos. Os dados já salvos não foram apagados."});
-$("addExtra").addEventListener("click",()=>{extrasDraft.push({time:new Date().toTimeString().slice(0,5),value:"",note:""});renderExtras()});
+$("addExtra").addEventListener("click",()=>{extrasDraft.push({draftId:crypto.randomUUID(),time:new Date().toTimeString().slice(0,5),value:"",note:""});renderExtras()});
 $("loadDate").addEventListener("click",()=>loadDay($("recordDate").value));
+$("recordDate").addEventListener("change",()=>loadDay($("recordDate").value));
 $("tabDaily").addEventListener("click",()=>{$("daily").classList.remove("hidden");$("monthly").classList.add("hidden")});
 $("tabMonth").addEventListener("click",()=>{$("monthly").classList.remove("hidden");$("daily").classList.add("hidden");renderMonthly()});
 $("showMonth").addEventListener("click",renderMonthly);
