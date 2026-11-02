@@ -1,4 +1,4 @@
-const CACHE="glicemia-pwa-v3";
+const CACHE="glicemia-pwa-v4";
 const FILES=["./","./index.html","./manifest.json"];
 self.addEventListener("install",event=>{
   self.skipWaiting();
