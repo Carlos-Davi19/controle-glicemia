@@ -82,3 +82,9 @@ A versão atual adiciona carregamento automático ao selecionar a data e salvame
 - O relatório mensal e o Excel montam as colunas de insulina conforme o esquema e os dados do mês.
 - O esquema é salvo no backup e restaurado com ele.
 - Correção: ao trocar de pessoa ou de data com um campo ainda em edição, o valor podia ser gravado na pessoa ou data errada. Agora cada tela grava sempre na pessoa e na data em que foi aberta.
+
+## Versão 5.2
+- **Impressão no iPhone:** o botão “Gerar PDF (imprimir / enviar)” cria um arquivo PDF de verdade dentro do app (sem internet e sem bibliotecas externas) e abre o menu Compartilhar, com Imprimir, o app da impressora (ex.: HP Smart), Salvar em Arquivos, WhatsApp e e-mail.
+  - Motivo: no app instalado na tela de início, o iOS não abre o diálogo de impressão da página, e a “nova aba” gerava uma página HTML, formato que apps de impressora como o HP Smart não aceitam.
+- Mesmo layout do relatório anterior: A4 paisagem, mês completo, destaques, médias, resumo por horário, insulina por horário e total, e medições adicionais. Páginas numeradas.
+- “Imprimir pelo navegador” continua disponível para uso no computador.

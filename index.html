@@ -106,7 +106,7 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 </style>
 </head>
 <body>
-<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.1</p></header>
+<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.2</p></header>
 <main>
 <nav class="no-print">
 <button id="tabDaily" class="secondary active">Registro diário</button>
@@ -161,8 +161,9 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 <label><input type="checkbox" id="optAllDays" checked> Listar todos os dias do mês</label>
 <label><input type="checkbox" id="optInsulin" checked> Incluir insulina</label>
 </div>
-<div class="actions"><button id="printMonth">Imprimir / Salvar PDF</button><button id="openReport" class="secondary">Abrir relatório em nova aba</button><button id="exportExcel" class="secondary">Exportar Excel</button></div>
-<p class="note">A página sai em A4 paisagem. No iPhone, se o diálogo não abrir, use “Abrir relatório em nova aba” e depois Compartilhar → Imprimir (ou “Salvar em Arquivos” para gerar o PDF).</p>
+<div class="actions"><button id="sharePdf">Gerar PDF (imprimir / enviar)</button><button id="exportExcel" class="secondary">Exportar Excel</button></div>
+<p class="note">O PDF sai em A4 paisagem. No iPhone abre o menu Compartilhar: escolha <strong>Imprimir</strong>, o app da sua impressora (ex.: HP Smart), <strong>Salvar em Arquivos</strong>, WhatsApp ou e-mail.</p>
+<div class="actions"><button id="printMonth" class="secondary">Imprimir pelo navegador (computador)</button></div>
 <div id="monthStatus" class="status"></div>
 </div>
 <div id="monthReport"></div>
@@ -195,7 +196,7 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 
 <script>
 "use strict";
-const APP_VERSION="5.1";
+const APP_VERSION="5.2";
 const KEY="controleGlicemia.v1";
 const UNDO_KEY="controleGlicemia.undo";
 const PEOPLE=["Carlos","Rosana"];
@@ -462,12 +463,170 @@ function reportOptions(){return {allDays:$("optAllDays").checked,insulin:$("optI
 function renderMonthly(){const ym=$("monthPicker").value;if(!ym){$("monthReport").innerHTML="";return}$("monthReport").innerHTML=buildReport(currentPerson,ym,reportOptions())}
 function refreshMonthlyIfVisible(){if(!$("monthly").classList.contains("hidden"))renderMonthly()}
 function printMonth(){if(!$("monthPicker").value){alert("Selecione o mês do relatório.");return}renderMonthly();setTimeout(()=>window.print(),50)}
-function openReportTab(){
+/* ---------- PDF nativo (sem bibliotecas externas; funciona offline) ---------- */
+const HELV_W=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,761,556,0,222,556,333,1000,556,556,333,1000,667,333,1000,0,611,0,0,222,222,333,333,350,556,1000,333,1000,500,333,944,0,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500];
+const HELVB_W=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,761,556,0,278,556,500,1000,556,556,333,1000,667,333,1000,0,611,0,0,278,278,500,500,350,556,1000,333,1000,556,333,944,0,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556];
+const CP1252={0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,0x017D:0x8E,0x2018:0x91,0x2019:0x92,0x201C:0x93,0x201D:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,0x203A:0x9B,0x0153:0x9C,0x017E:0x9E,0x0178:0x9F};
+const PDF_SUBST={"≥":">=","≤":"<=","→":"->","×":"x"};
+function toWin(s){let out="";for(const ch of String(s??"")){if(PDF_SUBST[ch]){out+=PDF_SUBST[ch];continue}const c=ch.codePointAt(0);
+  if(c>=32&&c<127)out+=ch;else if(c>=0xA0&&c<=0xFF)out+=String.fromCharCode(c);else if(CP1252[c])out+=String.fromCharCode(CP1252[c]);else if(c===10)out+=" ";else out+="?"}return out}
+function textW(s,size,bold){const w=bold?HELVB_W:HELV_W;let t=0;for(let i=0;i<s.length;i++)t+=w[s.charCodeAt(i)]||556;return t*size/1000}
+function pdfEsc(s){return s.replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)")}
+function fitText(s,size,bold,maxW){if(textW(s,size,bold)<=maxW)return s;while(s.length>1&&textW(s+"...",size,bold)>maxW)s=s.slice(0,-1);return s+"..."}
+
+class MiniPdf{
+  constructor(w=842,h=595){this.W=w;this.H=h;this.pages=[];this.addPage()}
+  addPage(){this.cur=[];this.pages.push(this.cur);return this}
+  rgb(c){return c.map(v=>v.toFixed(3)).join(" ")}
+  rect(x,y,w,h,{fill=null,stroke=null,lw=0.5}={}){const Y=this.H-y-h;let op="";if(fill)op+=`${this.rgb(fill)} rg `;if(stroke)op+=`${this.rgb(stroke)} RG ${lw} w `;
+    op+=`${x.toFixed(2)} ${Y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re ${fill&&stroke?"B":fill?"f":"S"}`;this.cur.push(op)}
+  line(x1,y1,x2,y2,{color=[0,0,0],lw=0.5}={}){this.cur.push(`${this.rgb(color)} RG ${lw} w ${x1.toFixed(2)} ${(this.H-y1).toFixed(2)} m ${x2.toFixed(2)} ${(this.H-y2).toFixed(2)} l S`)}
+  // y = linha de base medida a partir do topo
+  text(x,y,str,{size=9,bold=false,color=[0,0,0],align="left",maxW=null}={}){let s=toWin(str);if(maxW)s=fitText(s,size,bold,maxW);
+    const w=textW(s,size,bold);const X=align==="center"?x-w/2:align==="right"?x-w:x;
+    this.cur.push(`BT /${bold?"F2":"F1"} ${size} Tf ${this.rgb(color)} rg ${X.toFixed(2)} ${(this.H-y).toFixed(2)} Td (${pdfEsc(s)}) Tj ET`);return w}
+  output(){
+    const objs=[];const add=s=>{objs.push(s);return objs.length};
+    const cat=add(""),pagesId=add(""),f1=add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"),f2=add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+    const kids=[];
+    this.pages.forEach(ops=>{const content=ops.join("\n");const cid=add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+      kids.push(add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${this.W} ${this.H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${cid} 0 R >>`))});
+    objs[cat-1]=`<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+    objs[pagesId-1]=`<< /Type /Pages /Kids [${kids.map(k=>k+" 0 R").join(" ")}] /Count ${kids.length} >>`;
+    let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";const offs=[];
+    objs.forEach((o,i)=>{offs.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+    const xref=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("");
+    out+=`trailer\n<< /Size ${objs.length+1} /Root ${cat} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+    const bytes=new Uint8Array(out.length);for(let i=0;i<out.length;i++)bytes[i]=out.charCodeAt(i)&255;return bytes;
+  }
+}
+
+const C={green:[0.078,0.42,0.357],head:[0.89,0.933,0.918],headU:[0.875,0.906,0.961],insF:[0.953,0.965,0.988],insT:[0.12,0.25,0.47],
+  flagF:[1,0.84,0.816],flagT:[0.54,0.06,0.06],grid:[0.6,0.66,0.64],we:[0.945,0.945,0.945],gray:[0.6,0.6,0.6],dv:[0.54,0.29,0],foot:[0.933,0.953,0.945],txt:[0.07,0.07,0.07]};
+
+function buildPdf(person,ym,opt){
+  const pdf=new MiniPdf(),M=22,W=pdf.W-2*M;
+  const showIns=opt.insulin,days=monthData(person,ym);
+  const rows=opt.allDays?days:days.filter(d=>d.has);
+  const withData=days.filter(d=>d.has);
+  const extras=days.flatMap(d=>d.ex);
+  const extraG=extras.map(x=>glic(x.value));
+  const nMeas=sum(FIELDS.map(f=>days.filter(d=>d.g[f.id]!==null).length))+extraG.filter(v=>v!==null).length;
+  const nHigh=sum(FIELDS.map(f=>days.filter(d=>d.g[f.id]!==null&&d.g[f.id]>=HIGH).length))+extraG.filter(v=>v!==null&&v>=HIGH).length;
+  const hasExtraIns=extras.some(x=>units(x.nph)!==null||units(x.rap)!==null);
+  const groups=INS_SLOTS.map(sl=>({sl,types:showIns?typesFor(sl.id,person,k=>days.some(d=>d.ins[k]!==null)):[]})).filter(g=>!g.sl.bed||g.types.length);
+  const title=`Controle de glicemia${showIns?" e insulina":""} — ${monthLabel(ym)}`;
+  const sub=`${person}  •  ${withData.length} dia(s) com registro  •  ${nMeas} medição(ões)  •  ${nHigh} valor(es) ≥${HIGH} mg/dL`;
+  const meta=[`Glicemia em mg/dL • Insulina em UI`,`Gerado em ${fmtDateTime(new Date().toISOString())}`,`Controle de Glicemia v${APP_VERSION}`];
+  let pageNo=0;
+  function header(cont){pageNo++;
+    pdf.text(M,M+14,title+(cont?" (continuação)":""),{size:15,bold:true,color:C.green});
+    pdf.text(M,M+28,sub,{size:9.5});
+    meta.forEach((t,i)=>pdf.text(M+W,M+8+i*9,t,{size:7,align:"right",color:[0.35,0.35,0.35]}));
+    pdf.line(M,M+34,M+W,M+34,{color:C.green,lw:1.5});
+    pdf.text(M+W,pdf.H-10,`Página ${pageNo}`,{size:7,align:"right",color:C.gray});
+    return M+48;
+  }
+  // ----- colunas da tabela principal -----
+  const cols=[{key:"day",w:38,kind:"day"}];
+  groups.forEach(g=>{let first=true;if(!g.sl.bed){cols.push({key:g.sl.id,w:g.types.length?36:56,kind:"g",slot:g.sl,gs:true});first=false}
+    g.types.forEach(t=>{cols.push({key:insKey(t.k,g.sl.id),w:26,kind:"u",gs:first,label:t.short});first=false})});
+  if(showIns){cols.push({key:"totN",w:30,kind:"t",gs:true,label:"NPH"});cols.push({key:"totR",w:30,kind:"t",label:"Ráp."})}
+  const fixed=sum(cols.map(c=>c.w));let exW=W-fixed;
+  if(exW<60){const k=(W-60)/fixed;cols.forEach(c=>c.w*=k);exW=60}
+  cols.push({key:"ex",w:exW,kind:"ex",gs:true});
+  let x=M;cols.forEach(c=>{c.x=x;x+=c.w});
+  const H1=13,H2=11,RH=Math.min(14,Math.max(11,(pdf.H-M-56-H1-H2-14-14)/Math.max(rows.length,1)));
+  function cell(c,y,h,txt,o={}){pdf.rect(c.x,y,c.w,h,{fill:o.fill||null,stroke:C.grid,lw:0.4});
+    if(txt!==""&&txt!==null&&txt!==undefined){const size=o.size||8;const ty=y+h/2+size*0.35;
+      if(o.align==="left")pdf.text(c.x+3,ty,String(txt),{size,bold:o.bold,color:o.color||C.txt,maxW:c.w-5});
+      else pdf.text(c.x+c.w/2,ty,String(txt),{size,bold:o.bold,color:o.color||C.txt,align:"center",maxW:c.w-3})}}
+  function tableHead(y){
+    // linha 1: grupos
+    cell(cols[0],y,H1+H2,"Dia",{fill:C.head,bold:true});
+    const spans=[];groups.forEach(g=>{const ks=[...(g.sl.bed?[]:[g.sl.id]),...g.types.map(t=>insKey(t.k,g.sl.id))];spans.push({label:g.sl.short,cs:cols.filter(c=>ks.includes(c.key)),u:g.sl.bed})});
+    if(showIns)spans.push({label:`Total dia (UI)${hasExtraIns?"*":""}`,cs:cols.filter(c=>c.kind==="t"),u:true});
+    spans.forEach(s=>{const x0=s.cs[0].x,w=sum(s.cs.map(c=>c.w));pdf.rect(x0,y,w,H1,{fill:s.u?C.headU:C.head,stroke:C.grid,lw:0.4});const lab=toWin(s.label);let fs=7.5;while(fs>5.6&&textW(lab,fs,true)>w-3)fs-=0.2;pdf.text(x0+w/2,y+H1/2+fs*0.35,s.label,{size:fs,bold:true,align:"center",maxW:w-2,color:s.u?C.insT:C.txt})});
+    cols.forEach(c=>{if(c.kind==="g")cell(c,y+H1,H2,"mg/dL",{fill:C.head,bold:true,size:6.5});else if(c.kind==="u"||c.kind==="t")cell(c,y+H1,H2,c.label,{fill:C.headU,bold:true,size:6.5,color:C.insT})});
+    const exC=cols[cols.length-1];cell(exC,y,H1+H2,"Adicionais",{fill:C.head,bold:true,size:7.5});
+    return y+H1+H2;
+  }
+  function groupLines(y0,y1){cols.forEach(c=>{if(c.gs)pdf.line(c.x,y0,c.x,y1,{color:[0.2,0.2,0.2],lw:1.1})})}
+  let y=header(false);let yTop=y;y=tableHead(y);
+  rows.forEach(d=>{
+    if(y+RH>pdf.H-M-16){groupLines(yTop,y);pdf.addPage();y=header(true);yTop=y;y=tableHead(y)}
+    const we=[0,6].includes(d.dow);const empty=!d.has;
+    cols.forEach(c=>{
+      if(c.kind==="day"){pdf.rect(c.x,y,c.w,RH,{fill:we?C.we:null,stroke:C.grid,lw:0.4});const t=d.date.slice(8);pdf.text(c.x+3,y+RH/2+2.8,t,{size:8,bold:!empty,color:empty?C.gray:C.txt});pdf.text(c.x+3+textW(t,8,!empty)+2,y+RH/2+2.8,WD[d.dow],{size:6.5,color:C.gray});return}
+      if(c.kind==="g"){const v=d.g[c.key];const flag=v!==null&&v>=HIGH;pdf.rect(c.x,y,c.w,RH,{fill:flag?C.flagF:null,stroke:C.grid,lw:0.4});
+        if(v===null)return;const pre=POST_OF[c.key];let dv="";if(pre&&d.g[pre]!==null){const diff=v-d.g[pre];if(Math.abs(diff)>VAR_LIMIT)dv=(diff>0?"+":"")+diff}
+        const vs=String(v);if(dv){const w1=textW(vs,8,flag),w2=textW(dv,5.8,true),x0=c.x+(c.w-w1-w2-1.5)/2;pdf.text(x0,y+RH/2+2.8,vs,{size:8,bold:flag,color:flag?C.flagT:C.txt});pdf.text(x0+w1+1.5,y+RH/2+1,dv,{size:5.8,bold:true,color:C.dv})}
+        else pdf.text(c.x+c.w/2,y+RH/2+2.8,vs,{size:8,bold:flag,color:flag?C.flagT:C.txt,align:"center"});return}
+      if(c.kind==="u"){cell(c,y,RH,fmtU(d.ins[c.key]),{fill:C.insF,color:C.insT});return}
+      if(c.kind==="t"){cell(c,y,RH,fmtU(c.key==="totN"?d.totN:d.totR),{fill:C.insF,color:C.insT,bold:true});return}
+      if(c.kind==="ex")cell(c,y,RH,d.ex.map(x=>x.time+(glic(x.value)!==null?" "+glic(x.value):"")+(units(x.nph)!==null?" N"+fmtU(units(x.nph)):"")+(units(x.rap)!==null?" R"+fmtU(units(x.rap)):"")).join("; "),{align:"left",size:6.5,color:[0.33,0.33,0.33]});
+    });
+    y+=RH;
+  });
+  // linha de médias
+  cols.forEach(c=>{let t="";
+    if(c.kind==="day")t="Média";
+    else if(c.kind==="g"){const s=stats(days.map(d=>d.g[c.key]));t=s.n?fmtAvg(s.avg):"—"}
+    else if(c.kind==="u"){const s=stats(days.map(d=>d.ins[c.key]));t=s.n?fmtAvg(s.avg,1):""}
+    else if(c.kind==="t"){const s=stats(days.map(d=>c.key==="totN"?d.totN:d.totR));t=s.n?fmtAvg(s.avg,1):""}
+    cell(c,y,RH,t,{fill:C.foot,bold:true,align:c.kind==="day"?"left":"center",color:(c.kind==="u"||c.kind==="t")?C.insT:C.txt})});
+  y+=RH;groupLines(yTop,y);
+
+  // ----- resumo -----
+  function smallTable(x0,y0,widths,head,body,titleTxt){
+    pdf.text(x0,y0,titleTxt,{size:9,bold:true,color:C.green});let yy=y0+4;const rh=11.5;
+    const cs=[];let xx=x0;widths.forEach(w=>{cs.push({x:xx,w});xx+=w});
+    head.forEach((t,i)=>cell(cs[i],yy,rh,t,{fill:C.foot,bold:true,size:7,align:i===0?"left":"center"}));yy+=rh;
+    body.forEach(r=>{r.forEach((t,i)=>{const o=typeof t==="object"&&t!==null?t:{t};cell(cs[i],yy,rh,o.t,{size:7,align:o.align||(i===0?"left":"center"),fill:o.fill,color:o.color,bold:o.bold})});yy+=rh});
+    return yy;
+  }
+  const blockH=12+11.5*(FIELDS.length+2)+20;
+  if(y+blockH>pdf.H-M-16){pdf.addPage();y=header(true)+8}else y+=18;
+  const gap=14,bw=(W-2*gap)/3;
+  const statBody=FIELDS.map(f=>{const s=stats(days.map(d=>d.g[f.id]));return [f.label,s.n,fmtAvg(s.avg),s.min??"—",s.max??"—",s.high]});
+  {const s=stats(extraG);if(s.n)statBody.push(["Adicionais",s.n,fmtAvg(s.avg),s.min,s.max,s.high])}
+  const y1=smallTable(M,y,[bw*0.38,bw*0.1,bw*0.13,bw*0.13,bw*0.13,bw*0.13],["Horário","Nº","Média","Mín.","Máx.",`≥${HIGH}`],statBody,"Glicemia por horário (mg/dL)");
+  const varBody=PAIRS.map(([a,b,n])=>{const ds=days.filter(d=>d.g[a]!==null&&d.g[b]!==null);const big=ds.filter(d=>Math.abs(d.g[b]-d.g[a])>VAR_LIMIT).length;const av=ds.length?sum(ds.map(d=>d.g[b]-d.g[a]))/ds.length:null;return [n,ds.length,av===null?"—":(av>0?"+":"")+fmtAvg(av),big]});
+  const y2=smallTable(M+bw+gap,y,[bw*0.3,bw*0.18,bw*0.3,bw*0.22],["Refeição","Dias","Variação média",`Dias >${VAR_LIMIT}`],varBody,"Variação antes -> 2h após");
+  let y3=y;
+  if(showIns){const tN=days.map(d=>d.totN).filter(v=>v!==null),tR=days.map(d=>d.totR).filter(v=>v!==null);
+    const perSlot=INS_SLOTS.map(sl=>{const n=stats(days.map(d=>d.ins[insKey("nph",sl.id)])),r=stats(days.map(d=>d.ins[insKey("rap",sl.id)]));return (n.n||r.n)?[sl.label,n.n?fmtU(round1(sum(days.map(d=>d.ins[insKey("nph",sl.id)]).filter(v=>v!==null)))):"—",r.n?fmtU(round1(sum(days.map(d=>d.ins[insKey("rap",sl.id)]).filter(v=>v!==null)))):"—"]:null}).filter(Boolean);
+    const body=[...perSlot,...(extras.length&&hasExtraIns?[["Adicionais",...["nph","rap"].map(k=>{const v=extras.map(x=>units(x[k])).filter(v=>v!==null);return v.length?fmtU(round1(sum(v))):"—"})]]:[]),
+      [{t:"Total no mês",bold:true},{t:tN.length?fmtU(round1(sum(tN))):"—",bold:true},{t:tR.length?fmtU(round1(sum(tR))):"—",bold:true}],
+      ["Média por dia c/ aplicação",tN.length?fmtAvg(sum(tN)/tN.length,1):"—",tR.length?fmtAvg(sum(tR)/tR.length,1):"—"],
+      ["Dias com aplicação",String(days.filter(d=>d.totN!==null||d.totR!==null).length),""]];
+    y3=smallTable(M+2*(bw+gap),y,[bw*0.5,bw*0.25,bw*0.25],["Insulina (UI)","NPH","Rápida"],body,"Insulina no mês (UI)");
+  }
+  y=Math.max(y1,y2,y3)+16;
+  // ----- adicionais -----
+  if(extras.length){
+    const wd=showIns?[60,45,55,45,45,W-250]:[60,45,55,W-160];
+    const head=["Data","Horário","mg/dL",...(showIns?["NPH","Rápida"]:[]),"Observação"];head.lastAlignLeft=true;
+    const rh=11.5;let i=0;
+    while(i<extras.length){
+      if(y+rh*3>pdf.H-M-16){pdf.addPage();y=header(true)}
+      const room=Math.floor((pdf.H-M-16-y-16)/rh);const chunk=extras.slice(i,i+Math.max(1,room));
+      y=smallTable(M,y,wd,head,chunk.map(x=>{const g=glic(x.value);const fl=g!==null&&g>=HIGH;return [fmtDate(x.date),x.time||"",{t:g??"—",fill:fl?C.flagF:null,color:fl?C.flagT:null,bold:fl},...(showIns?[fmtU(units(x.nph))||"—",fmtU(units(x.rap))||"—"]:[]),{t:x.note||"",align:"left"}]}),i?"Medições / aplicações adicionais (cont.)":"Medições / aplicações adicionais")+14;
+      i+=chunk.length;
+    }
+  }
+  // ----- legenda -----
+  if(y+24>pdf.H-M-16){pdf.addPage();y=header(true)}
+  pdf.rect(M,y-7,12,9,{fill:C.flagF});pdf.text(M+1.5,y,"123",{size:6,bold:true,color:C.flagT});
+  pdf.text(M+16,y,`glicemia ≥${HIGH} mg/dL  •  número pequeno ao lado do valor 2h após = diferença em relação ao “antes” quando superior a ${VAR_LIMIT} mg/dL${showIns&&hasExtraIns?"  •  * total do dia inclui aplicações adicionais (N = NPH, R = Rápida)":""}`,{size:7,color:[0.27,0.27,0.27]});
+  pdf.text(M,y+11,"Critérios de organização definidos pelo usuário; não representam diagnóstico nem substituem orientação do profissional de saúde.",{size:7,color:[0.27,0.27,0.27]});
+  return pdf.output();
+}
+function pdfFileName(person,ym){const [y,m]=ym.split("-");const mes=new Date(+y,+m-1,1).toLocaleDateString("pt-BR",{month:"long"});return `glicemia-${person}-${mes}-${y}.pdf`.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
+async function sharePdf(){
   const ym=$("monthPicker").value;if(!ym){alert("Selecione o mês do relatório.");return}
-  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Glicemia ${esc(currentPerson)} ${esc(ym)}</title><style>body{margin:12px;background:#fff}.bar{margin-bottom:10px}.bar button{padding:10px 14px;font-size:16px}@media print{.bar{display:none}body{margin:0}}${$("reportCss").textContent}</style></head><body><div class="bar"><button onclick="window.print()">Imprimir / Salvar PDF</button></div>${buildReport(currentPerson,ym,reportOptions())}</body></html>`;
-  const url=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));
-  const w=window.open(url,"_blank");if(!w){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
-  setTimeout(()=>URL.revokeObjectURL(url),120000);
+  let bytes;try{bytes=buildPdf(currentPerson,ym,reportOptions())}catch(err){console.error(err);alert("Não foi possível gerar o PDF.");return}
+  await deliverFile(new Blob([bytes],{type:"application/pdf"}),pdfFileName(currentPerson,ym),`Relatório de glicemia — ${currentPerson} — ${monthLabel(ym)}`);
 }
 
 /* ---------- arquivos: compartilhar (iPhone) ou baixar ---------- */
@@ -609,7 +768,7 @@ $("monthPicker").addEventListener("change",renderMonthly);
 $("optAllDays").addEventListener("change",renderMonthly);
 $("optInsulin").addEventListener("change",renderMonthly);
 $("printMonth").addEventListener("click",printMonth);
-$("openReport").addEventListener("click",openReportTab);
+$("sharePdf").addEventListener("click",sharePdf);
 $("exportExcel").addEventListener("click",exportExcel);
 $("backup").addEventListener("click",exportBackup);
 $("restore").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"merge");e.target.value=""});

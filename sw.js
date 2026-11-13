@@ -1,6 +1,6 @@
-// Controle de Glicemia — service worker v5.1
+// Controle de Glicemia — service worker v5.2
 // Estratégia: rede primeiro (pega a versão nova quando há internet), cache como reserva offline.
-const CACHE="glicemia-pwa-v5-1";
+const CACHE="glicemia-pwa-v5-2";
 const FILES=["./","./index.html","./manifest.json"];
 
 self.addEventListener("install",event=>{
