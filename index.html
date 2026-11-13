@@ -10,146 +10,570 @@
 <link rel="manifest" href="manifest.json">
 <title>Controle de Glicemia</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172b27;background:#f4f7f6;--green:#146b5b;--line:#d7e2de}
-*{box-sizing:border-box}body{margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);background:#f4f7f6}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172b27;background:#f4f7f6;--green:#146b5b;--line:#d7e2de;--ins:#2d4f8a}
+*{box-sizing:border-box}
+body{margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);background:#f4f7f6}
 header{background:var(--green);color:white;padding:18px 16px 16px;position:sticky;top:0;z-index:3}
 header h1{font-size:22px;margin:0 0 5px}header p{font-size:13px;margin:0;opacity:.9}
-main{max-width:760px;margin:auto;padding:14px 12px 36px}.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:13px;box-shadow:0 2px 8px #143a2c0a}
-h2{font-size:17px;margin:0 0 12px}.datebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-input,select,textarea,button{font:inherit}input,select,textarea{border:1px solid #b8cbc4;border-radius:9px;padding:10px;background:white;color:#172b27;min-width:0}
-input[type=date]{flex:1}button{border:0;border-radius:9px;padding:11px 13px;background:var(--green);color:white;font-weight:600;cursor:pointer}
-button.secondary{background:#e5efeb;color:#17483d}button.danger{background:#a93333}button:disabled{opacity:.5}
+main{max-width:820px;margin:auto;padding:14px 12px 36px}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:13px;box-shadow:0 2px 8px #143a2c0a}
+h2{font-size:17px;margin:0 0 12px}h3{font-size:15px;margin:14px 0 8px}
+.datebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+input,select,textarea,button{font:inherit}
+input,select,textarea{border:1px solid #b8cbc4;border-radius:9px;padding:10px;background:white;color:#172b27;min-width:0}
+input[type=date],input[type=month]{flex:1}
+button,.btn{border:0;border-radius:9px;padding:11px 13px;background:var(--green);color:white;font-weight:600;cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center}
+button.secondary,.btn.secondary{background:#e5efeb;color:#17483d}
+button.danger{background:#a93333}button:disabled{opacity:.5}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .measure{border:1px solid var(--line);border-radius:11px;padding:10px;background:#fbfdfc}
-.measure label{display:block;font-size:13px;font-weight:650;margin-bottom:7px}
-.measure input{width:100%;font-size:20px;font-weight:600}
+.measure>label{display:block;font-size:13px;font-weight:650;margin-bottom:7px}
+.measure .glic{width:100%;font-size:20px;font-weight:600}
 .measure small{display:block;color:#60756d;margin-top:5px;font-size:11px}
-.measure.alert{background:#fff0ef;border-color:#d94b43}.measure.alert input{color:#a92323}
-.measure.warn{background:#fff8e6;border-color:#e0a329}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1}
+.measure.alert{background:#fff0ef;border-color:#d94b43}.measure.alert .glic{color:#a92323}
+.ins-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.ins-row label{font-size:11px;font-weight:650;color:var(--ins);display:flex;flex-direction:column;gap:3px}
+.ins-row input{width:100%;padding:8px;font-size:16px;border-color:#b9c7de;background:#f6f8fd}
+.noins{font-style:italic}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions>*{flex:1}
 .note{font-size:12px;color:#60756d;line-height:1.45}
 .status{font-size:13px;margin-top:9px;min-height:18px;color:var(--green)}
-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{border:1px solid #c9d8d2;padding:7px 5px;text-align:center}th{background:#e9f1ee}
 .tablewrap{overflow-x:auto}
+.simple{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+.simple th,.simple td{border:1px solid #c9d8d2;padding:7px 5px;text-align:center}.simple th{background:#e9f1ee}
 .flag{background:#ffe3e0;color:#9c1d1d;font-weight:700}
-nav{display:flex;gap:8px;margin-bottom:12px}nav button{flex:1}
+nav{display:flex;gap:8px;margin-bottom:12px}nav button{flex:1}nav button.active{background:var(--green);color:#fff}
 .hidden{display:none!important}
-.extra-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:7px;margin:8px 0}
-.extra-row input{width:100%}
+.extra-row{display:grid;grid-template-columns:1.6fr 1fr .8fr .8fr auto;gap:6px;margin:8px 0;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.extra-row input{width:100%;padding:8px}
+.extra-row .x-note{grid-column:1/-1}
+.extra-head{display:grid;grid-template-columns:1.6fr 1fr .8fr .8fr auto;gap:6px;font-size:11px;font-weight:650;color:#60756d}
+.banner{border-radius:11px;padding:10px 12px;margin-bottom:13px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner.warn{background:#fff8e6;border:1px solid #e0a329;color:#6b4b00}
+.banner button{padding:8px 11px}
+.opts{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:10px 0}
+.opts label{display:flex;gap:6px;align-items:center}
+details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;margin-top:12px}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media print{header,nav,.no-print,.actions,button{display:none!important}#daily{display:none!important}#monthly{display:block!important}.hidden{display:none!important}body{background:white}.panel{box-shadow:none;border:0;padding:0}.tablewrap{overflow:visible}table{font-size:10px;white-space:normal}main{max-width:none;padding:0}}
+@media print{
+  header,nav,#daily,.no-print,.screen-only{display:none!important}
+  #monthly{display:block!important}
+  :root,html,body{background:white!important;padding:0}
+  main{max-width:none;padding:0}
+  .panel{box-shadow:none;border:0;padding:0;margin:0}
+}
+</style>
+<style id="reportCss">
+@page{size:A4 landscape;margin:8mm}
+.report{color:#111;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.report .rhead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #146b5b;padding-bottom:6px;margin-bottom:8px;gap:10px}
+.report .rhead h1{font-size:18px;margin:0;color:#146b5b}
+.report .rhead .who{font-size:13px;margin-top:2px}
+.report .rhead .meta{font-size:10px;color:#555;text-align:right}
+.report table.rt{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.report .rt th,.report .rt td{border:1px solid #9aa9a4;padding:3px 3px;text-align:center;line-height:1.15}
+.report .rt thead th{background:#e3eeea;font-weight:700}
+.report .rt thead tr.sub th{font-size:9px;font-weight:600}
+.report .rt th.u,.report .rt td.u{color:#1f3f78;background:#f3f6fc}
+.report .rt thead th.u{background:#dfe7f5}
+.report .rt .gs{border-left:2px solid #333}
+.report .rt td.day{text-align:left;white-space:nowrap;font-weight:600}
+.report .rt td.day span{font-weight:400;color:#666;font-size:9px;margin-left:2px}
+.report .rt tr.we td.day{background:#f1f1f1}
+.report .rt tr.empty td{color:#bbb}
+.report .rt td.flag{background:#ffd6d0;color:#8a1010;font-weight:800}
+.report .rt td .dv{display:block;font-size:8px;font-weight:700;color:#8a4b00}
+.report .rt td.tot{font-weight:700}
+.report .rt tfoot td{background:#eef3f1;font-weight:700}
+.report .rt td.ex{font-size:9px;color:#555;text-align:left}
+.report .cols{display:flex;gap:10px;margin-top:10px;align-items:flex-start;break-inside:avoid;page-break-inside:avoid}
+.report .cols>div{flex:1}
+.report h3{font-size:12px;margin:0 0 4px;color:#146b5b}
+.report table.st{width:100%;border-collapse:collapse;font-size:10px}
+.report .st th,.report .st td{border:1px solid #b5c2be;padding:2px 4px;text-align:center}
+.report .st th{background:#eef3f1}.report .st td:first-child,.report .st th:first-child{text-align:left}
+.report .legend{font-size:9px;color:#444;margin-top:8px;line-height:1.4}
+.report .legend b.f{background:#ffd6d0;color:#8a1010;padding:0 3px}
+@media screen{.report .rtwrap{overflow-x:auto}.report table.rt{min-width:820px}}
+@media print{
+  .report table.rt{font-size:9.5px}
+  .report .rt thead{display:table-header-group}
+  .report .rt tr{break-inside:avoid;page-break-inside:avoid}
+  .report .extras-sec{break-before:auto}
+}
 </style>
 </head>
 <body>
-<header><h1>Controle de Glicemia</h1><p>Registro pessoal • valores em mg/dL • Versão 4.2</p></header>
+<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.0</p></header>
 <main>
 <nav class="no-print">
-<button id="tabDaily" class="secondary">Registro diário</button>
+<button id="tabDaily" class="secondary active">Registro diário</button>
 <button id="tabMonth" class="secondary">Relatório mensal</button>
 </nav>
+
+<div id="backupBanner" class="banner warn no-print hidden"></div>
+
 <section id="daily">
 <div class="panel">
-<h2>Data do registro</h2><div class="datebar" style="margin-bottom:10px"><label for="personSelect"><strong>Pessoa:</strong></label><select id="personSelect"><option value="Carlos">Carlos</option><option value="Rosana">Rosana</option></select></div>
+<h2>Data do registro</h2>
+<div class="datebar" style="margin-bottom:10px"><label for="personSelect"><strong>Pessoa:</strong></label><select id="personSelect"></select></div>
 <div class="datebar"><input type="date" id="recordDate"><button id="loadDate" class="secondary">Carregar</button></div>
-<p class="note">Versão 4.2 • Cada medição é salva automaticamente ao digitar. Ao selecionar uma data, os dados daquele dia são carregados.</p>
+<p class="note">Cada valor é salvo automaticamente ao digitar. Ao selecionar uma data, os dados daquele dia são carregados.</p>
 </div>
+
 <div class="panel">
-<h2>Medições principais</h2>
+<h2>Medições e aplicações</h2>
 <div class="grid" id="mainMeasurements"></div>
 <div id="comparisons" class="note" style="margin-top:12px"></div>
-<div class="actions no-print"><button id="save">Salvar medições</button><button id="clear" class="secondary">Limpar campos</button></div>
+<div class="actions no-print"><button id="save">Salvar</button><button id="clear" class="secondary">Limpar campos</button></div>
 <div id="saveStatus" class="status" role="status"></div>
 </div>
+
 <div class="panel">
-<h2>Outras medições</h2>
-<p class="note">Use para registrar valores em horários adicionais. Data e horário serão salvos no registro.</p>
+<h2>Outras medições / aplicações</h2>
+<p class="note">Horários adicionais. Preencha o horário e pelo menos um valor (glicemia, NPH ou Rápida). Os registros salvos desta data aparecem aqui e podem ser editados ou excluídos.</p>
+<div id="extrasHead" class="extra-head hidden"><span>Horário</span><span>mg/dL</span><span>NPH</span><span>Rápida</span><span></span></div>
 <div id="extras"></div>
-<div class="actions no-print"><button id="addExtra" class="secondary">+ Adicionar medição</button></div>
+<div class="actions no-print"><button id="addExtra" class="secondary">+ Adicionar horário</button></div>
 </div>
+
 <div class="panel">
-<h2>Registros desta data</h2><div id="dayRecords" class="tablewrap"></div>
+<h2>Resumo desta data</h2><div id="dayRecords" class="tablewrap"></div>
 </div>
 </section>
+
 <section id="monthly" class="hidden">
 <div class="panel">
+<div class="no-print">
 <h2>Relatório mensal</h2>
-<div class="datebar no-print"><input type="month" id="monthPicker"><button id="showMonth">Consultar</button><button id="printMonth" class="secondary">Imprimir / PDF</button></div>
-<p class="note">No iPhone, use Compartilhar/Imprimir no menu do Safari ou escolha “Salvar em Arquivos” no diálogo de impressão.</p>
-<div id="monthSummary"></div><div id="monthTable" class="tablewrap"></div>
+<div class="datebar"><select id="personSelectMonth" aria-label="Pessoa"></select><input type="month" id="monthPicker"></div>
+<div class="opts">
+<label><input type="checkbox" id="optAllDays" checked> Listar todos os dias do mês</label>
+<label><input type="checkbox" id="optInsulin" checked> Incluir insulina</label>
+</div>
+<div class="actions"><button id="printMonth">Imprimir / Salvar PDF</button><button id="openReport" class="secondary">Abrir relatório em nova aba</button><button id="exportExcel" class="secondary">Exportar Excel</button></div>
+<p class="note">A página sai em A4 paisagem. No iPhone, se o diálogo não abrir, use “Abrir relatório em nova aba” e depois Compartilhar → Imprimir (ou “Salvar em Arquivos” para gerar o PDF).</p>
+<div id="monthStatus" class="status"></div>
+</div>
+<div id="monthReport"></div>
 </div>
 </section>
-<div class="panel note">
-<strong>Privacidade:</strong> nesta versão, os registros ficam armazenados neste navegador, neste aparelho. Não há conta nem envio de medições para servidor. Evite apagar os dados do site sem antes exportar/ imprimir o relatório.
-<br><br><strong>Atenção:</strong> os destaques são critérios de organização configurados por você (≥180 mg/dL e diferença absoluta &gt;30 mg/dL). Não representam diagnóstico nem substituem orientações do profissional de saúde.
-<div class="actions no-print"><label class="secondary" style="display:inline-flex;align-items:center;padding:11px 13px;border-radius:9px;background:#e5efeb;color:#17483d;font-weight:600;cursor:pointer">Importar planilha Excel<input id="excelImport" type="file" accept=".xlsx,.xls" hidden></label><button id="backup" class="secondary">Exportar backup JSON</button><label class="secondary" style="display:inline-flex;align-items:center;padding:11px 13px;border-radius:9px;background:#e5efeb;color:#17483d;font-weight:600;cursor:pointer">Importar backup<input id="restore" type="file" accept=".json,application/json" hidden></label></div>
+
+<div class="panel no-print" id="backupPanel">
+<h2>Backup e dados</h2>
+<p class="note" id="backupInfo"></p>
+<div class="actions">
+<button id="backup">Exportar backup</button>
+<label class="btn secondary">Restaurar backup<input id="restore" type="file" accept=".json,application/json" hidden></label>
+</div>
+<details>
+<summary>Mais opções</summary>
+<div class="actions">
+<label class="btn secondary">Importar planilha Excel<input id="excelImport" type="file" accept=".xlsx,.xls" hidden></label>
+<label class="btn secondary">Substituir tudo por um backup<input id="restoreReplace" type="file" accept=".json,application/json" hidden></label>
+<button id="undoRestore" class="secondary hidden">Desfazer última restauração</button>
+</div>
+<p class="note">“Restaurar backup” mescla: só preenche o que está vazio no aparelho e nunca apaga registros. “Substituir tudo” troca todos os dados pelos do arquivo. Antes de qualquer restauração, uma cópia de segurança dos dados atuais é guardada para permitir desfazer.</p>
+</details>
+</div>
+
+<div class="panel note no-print">
+<strong>Privacidade:</strong> os registros ficam armazenados neste aparelho, neste navegador. Não há conta nem envio de dados para servidor. Exporte backups regularmente — se os dados do site forem apagados, só o backup os recupera.
+<br><br><strong>Atenção:</strong> os destaques (≥180 mg/dL e diferença &gt;30 mg/dL entre antes e 2h após a refeição) são critérios de organização configurados por você. Não representam diagnóstico nem substituem orientações do profissional de saúde.
 </div>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <script>
-const labels=[
-["Antes do café","posCafe","café da manhã"],
-["2h após o café","antesAlmoco","café da manhã"],
-["Antes do almoço","posAlmoco","almoço"],
-["2h após o almoço","antesJantar","almoço"],
-["Antes do jantar","posJantar","jantar"],
-["2h após o jantar","", "jantar"]
-];
-const fields=[
-{id:"antesCafe",label:"Antes do café"},
-{id:"posCafe",label:"2h após o café"},
-{id:"antesAlmoco",label:"Antes do almoço"},
-{id:"posAlmoco",label:"2h após o almoço"},
-{id:"antesJantar",label:"Antes do jantar"},
-{id:"posJantar",label:"2h após o jantar"}
-];
+"use strict";
+const APP_VERSION="5.0";
 const KEY="controleGlicemia.v1";
+const UNDO_KEY="controleGlicemia.undo";
 const PEOPLE=["Carlos","Rosana"];
-let db=loadDb(), extrasDraft=[];
-let currentPerson="Carlos";
+const HIGH=180, VAR_LIMIT=30, BACKUP_REMIND_DAYS=7;
+const XLSX_URL="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+
+// Medições principais. insulin:false = medição sem aplicação (a última, antes de dormir).
+const FIELDS=[
+  {id:"antesCafe",  label:"Antes do café",    short:"Antes do café",  insulin:true},
+  {id:"posCafe",    label:"2h após o café",   short:"2h após café",   insulin:true},
+  {id:"antesAlmoco",label:"Antes do almoço",  short:"Antes do almoço",insulin:true},
+  {id:"posAlmoco",  label:"2h após o almoço", short:"2h após almoço", insulin:true},
+  {id:"antesJantar",label:"Antes do jantar",  short:"Antes do jantar",insulin:true},
+  {id:"posJantar",  label:"2h após o jantar", short:"2h após jantar", insulin:false}
+];
+const INS_TYPES=[{k:"nph",label:"NPH",short:"NPH"},{k:"rap",label:"Rápida",short:"Ráp."}];
+const PAIRS=[["antesCafe","posCafe","Café"],["antesAlmoco","posAlmoco","Almoço"],["antesJantar","posJantar","Jantar"]];
+const insKey=(t,fid)=>`${t}_${fid}`;
+const INS_FIELDS=FIELDS.filter(f=>f.insulin);
+const DAY_KEYS=[...FIELDS.map(f=>f.id),...INS_FIELDS.flatMap(f=>INS_TYPES.map(t=>insKey(t.k,f.id)))];
+const POST_OF=Object.fromEntries(PAIRS.map(([a,b])=>[b,a]));
+
 const $=id=>document.getElementById(id);
-function loadDb(){try{let x=JSON.parse(localStorage.getItem(KEY)||'{"days":{},"extras":[]}');if(!x.people){x.people={Carlos:{days:x.days||{},extras:x.extras||[]},Rosana:{days:{},extras:[]}};delete x.days;delete x.extras;} PEOPLE.forEach(n=>{if(!x.people[n])x.people[n]={days:{},extras:[]};if(!x.people[n].days)x.people[n].days={};if(!x.people[n].extras)x.people[n].extras=[]});return x;}catch{return {people:{Carlos:{days:{},extras:[]},Rosana:{days:{},extras:[]}}}}}
-function personDb(){return db.people[currentPerson]}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(db));return true}catch(err){$("saveStatus").textContent="Não foi possível salvar. Exporte um backup e verifique o armazenamento.";return false}}
-function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
-function fmtDate(s){if(!s)return "";let [y,m,d]=s.split("-");return `${d}/${m}/${y}`}
-function valueNum(v){if(v===null||v===undefined||v==="")return null;let n=Number(v);return Number.isFinite(n)&&n>=0?n:null}
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function mainValues(){let out={};fields.forEach(f=>out[f.id]=valueNum($(f.id).value));return out}
-function renderInputs(){ $("mainMeasurements").innerHTML=fields.map(f=>`<div class="measure" id="card-${f.id}"><label for="${f.id}">${f.label}</label><input type="number" min="0" step="1" inputmode="numeric" id="${f.id}" placeholder="mg/dL"><small>Alerta visual a partir de 180</small></div>`).join("");function autoSaveMain(){renderComparisons();const date=$("recordDate").value;if(!date)return;personDb().days[date]={...getDay(date),...mainValues(),updatedAt:new Date().toISOString()};if(persist()){$("saveStatus").textContent=`${currentPerson} • Salvo automaticamente • `+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});renderDayRecords();renderMonthly()}}
-fields.forEach(f=>{$(f.id).addEventListener("input",autoSaveMain);$(f.id).addEventListener("change",autoSaveMain)})}
-function renderComparisons(){fields.forEach(f=>{let n=valueNum($(f.id).value);$("card-"+f.id).classList.toggle("alert",n!==null&&n>=180)});const pairs=[["antesCafe","posCafe","Café"],["antesAlmoco","posAlmoco","Almoço"],["antesJantar","posJantar","Jantar"]];$("comparisons").innerHTML=pairs.map(([a,b,n])=>{let x=valueNum($(a).value),y=valueNum($(b).value);if(x===null||y===null)return `<div>${n}: preencha as duas medições para comparar.</div>`;let diff=y-x;return `<div class="${Math.abs(diff)>30?"flag":""}" style="padding:5px;margin-top:3px;border-radius:5px">${n}: ${diff>0?"+":""}${diff} mg/dL ${Math.abs(diff)>30?"— variação superior a 30":"— variação até 30"}</div>`}).join("")}
-function getDay(date){return personDb().days[date]||Object.fromEntries(fields.map(f=>[f.id,null]))}
-function saveMain(){const date=$("recordDate").value;if(!date)return;personDb().days[date]={...getDay(date),...mainValues(),updatedAt:new Date().toISOString()};persist();$("saveStatus").textContent=`Medições de ${currentPerson} salvas em `+fmtDate(date)+".";renderDayRecords();renderMonthly()}
-function loadDay(date){$("recordDate").value=date;const data=getDay(date);fields.forEach(f=>$(f.id).value=data[f.id]??"");extrasDraft=[];$("extras").innerHTML="";renderComparisons();renderDayRecords()}
-function renderExtras(){$("extras").innerHTML=extrasDraft.map((x,i)=>`<div class="extra-row"><input type="time" aria-label="Horário" value="${esc(x.time)}" data-i="${i}" data-k="time"><input type="number" min="0" step="1" inputmode="numeric" placeholder="mg/dL" value="${esc(x.value)}" data-i="${i}" data-k="value"><input type="text" placeholder="Observação" value="${esc(x.note)}" data-i="${i}" data-k="note"><button class="danger" data-remove="${i}" aria-label="Excluir">×</button></div>`).join("");$("extras").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{let i=+el.dataset.i,k=el.dataset.k;extrasDraft[i][k]=el.value;if(k==="value"||k==="time"){const date=$("recordDate").value;if(date&&extrasDraft[i].time&&valueNum(extrasDraft[i].value)!==null){let draftId=extrasDraft[i].draftId;personDb().extras=personDb().extras.filter(x=>!(x.date===date&&x.draftId===draftId));personDb().extras.push({id:draftId,draftId,date,time:extrasDraft[i].time,value:valueNum(extrasDraft[i].value),note:extrasDraft[i].note||"",createdAt:new Date().toISOString()});persist();renderDayRecords();renderMonthly()}}}));$("extras").querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{const item=extrasDraft[+b.dataset.remove];if(item?.draftId){personDb().extras=personDb().extras.filter(x=>x.draftId!==item.draftId);persist();renderDayRecords();renderMonthly()}extrasDraft.splice(+b.dataset.remove,1);renderExtras()}))}
-function saveExtra(){const date=$("recordDate").value;if(!date)return;let valid=extrasDraft.filter(x=>valueNum(x.value)!==null&&x.time&&!personDb().extras.some(e=>e.draftId===x.draftId));valid.forEach(x=>personDb().extras.push({id:x.draftId||crypto.randomUUID(),draftId:x.draftId||crypto.randomUUID(),date,time:x.time,value:valueNum(x.value),note:x.note||"",createdAt:new Date().toISOString()}));persist();extrasDraft=[];renderExtras();renderDayRecords();renderMonthly();$("saveStatus").textContent=valid.length?`${valid.length} medição(ões) adicional(is) salva(s).`:"Nenhuma medição adicional válida para salvar."}
-function renderDayRecords(){const date=$("recordDate").value;const d=getDay(date);let rows=fields.map(f=>[f.label,d[f.id]]).filter(r=>r[1]!==null&&r[1]!==undefined).map(r=>`<tr><td>${esc(r[0])}</td><td class="${r[1]>=180?'flag':''}">${r[1]}</td><td>Principal</td></tr>`);personDb().extras.filter(x=>x.date===date).sort((a,b)=>a.time.localeCompare(b.time)).forEach(x=>rows.push(`<tr><td>${esc(x.time)} ${esc(x.note)}</td><td class="${x.value>=180?'flag':''}">${x.value}</td><td>Adicional</td></tr>`));$("dayRecords").innerHTML=rows.length?`<table><thead><tr><th>Medição / horário</th><th>mg/dL</th><th>Tipo</th></tr></thead><tbody>${rows.join("")}</tbody></table>`:"<p class='note'>Nenhuma medição salva nesta data.</p>"}
-function renderMonthly(){const month=$("monthPicker").value;if(!month)return;let dates=Object.keys(personDb().days).filter(d=>d.startsWith(month)).sort();const ex=personDb().extras.filter(x=>x.date.startsWith(month));const countMain=dates.reduce((n,d)=>n+fields.filter(f=>personDb().days[d][f.id]!==null&&personDb().days[d][f.id]!==undefined).length,0);const countAlerts=dates.reduce((n,d)=>n+fields.filter(f=>valueNum(personDb().days[d][f.id])>=180).length,0)+ex.filter(x=>x.value>=180).length;$("monthSummary").innerHTML=`<p><strong>${currentPerson}</strong> • <strong>${dates.length}</strong> dias com registros principais • <strong>${countMain+ex.length}</strong> medições registradas • <strong>${countAlerts}</strong> valores ≥180 mg/dL destacados</p>`;const heads=fields.map(f=>`<th>${f.label}</th>`).join("");const rows=dates.map(date=>{let d=personDb().days[date];return `<tr><td>${fmtDate(date)}</td>${fields.map(f=>{let v=valueNum(d[f.id]);return `<td class="${v!==null&&v>=180?'flag':''}">${v??'—'}</td>`}).join("")}</tr>`}).join("");const extrasRows=ex.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(x=>`<tr><td>${fmtDate(x.date)} ${esc(x.time)}</td><td colspan="6" style="text-align:left" class="${x.value>=180?'flag':''}">${x.value} mg/dL — ${esc(x.note||"Medição adicional")}</td></tr>`).join("");$("monthTable").innerHTML=`<table><thead><tr><th>Data</th>${heads}</tr></thead><tbody>${rows||`<tr><td colspan="7">Sem registros neste mês.</td></tr>`}${extrasRows}</tbody></table>`}
-function normalizeDate(v){if(v instanceof Date)return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`;if(typeof v==="number"&&window.XLSX){let d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`}let s=String(v||"").trim();let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;m=s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);if(m)return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;return null}
-function valCell(v){if(v===null||v===undefined||v==="")return null;let n=Number(v);return Number.isFinite(n)&&n>=0?n:null}
-async function importExcel(file){if(!window.XLSX){alert("O leitor de Excel não foi carregado. Verifique a conexão com a internet e tente novamente.");return}try{const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array",cellDates:true});let target=personDb(),added=0,skipped=0;const colMap=["antesCafe","posCafe","antesAlmoco","posAlmoco","antesJantar","posJantar"];
-for(const sheetName of wb.SheetNames){if(!/^\d{6}$/.test(sheetName))continue;const ws=wb.Sheets[sheetName];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});if(data.length<2)continue;for(let r=1;r<data.length;r++){const row=data[r];const date=normalizeDate(row[0]);if(!date)continue;let vals={};let has=false;colMap.forEach((k,i)=>{let v=valCell(row[i+1]);if(v!==null){vals[k]=v;has=true}});if(!has)continue;let existing=target.days[date]||Object.fromEntries(fields.map(f=>[f.id,null]));let changed=false;for(const k of colMap){if(vals[k]!==undefined){if(existing[k]===null||existing[k]===undefined||existing[k]===""){existing[k]=vals[k];changed=true}else skipped++}}if(changed){target.days[date]={...existing,updatedAt:new Date().toISOString(),importedFrom:file.name};added+=Object.keys(vals).filter(k=>existing[k]===vals[k]).length}}}
-persist();loadDay($("recordDate").value);renderMonthly();alert(`Importação concluída para ${currentPerson}.\nMedições adicionadas: ${added}\nCélulas ignoradas por já terem valor: ${skipped}\nOs dados existentes foram preservados.`)}catch(err){console.error(err);alert("Não foi possível ler a planilha. Confira se é um arquivo Excel .xlsx válido.")}}
-$("save").addEventListener("click",()=>{saveMain();saveExtra()});$("clear").addEventListener("click",()=>{fields.forEach(f=>$(f.id).value="");extrasDraft=[];renderExtras();renderComparisons();$("saveStatus").textContent="Campos limpos. Os dados já salvos não foram apagados."});$("addExtra").addEventListener("click",()=>{extrasDraft.push({draftId:crypto.randomUUID(),time:new Date().toTimeString().slice(0,5),value:"",note:""});renderExtras()});$("loadDate").addEventListener("click",()=>loadDay($("recordDate").value));$("recordDate").addEventListener("change",()=>loadDay($("recordDate").value));$("personSelect").addEventListener("change",()=>{currentPerson=$("personSelect").value;loadDay($("recordDate").value);renderMonthly();$("saveStatus").textContent=`Exibindo registros de ${currentPerson}.`});$("tabDaily").addEventListener("click",()=>{$("daily").classList.remove("hidden");$("monthly").classList.add("hidden")});$("tabMonth").addEventListener("click",()=>{$("monthly").classList.remove("hidden");$("daily").classList.add("hidden");renderMonthly()});$("showMonth").addEventListener("click",renderMonthly);
-function openPrintableReport(){
-  const person=$("personSelect").value;
-  const month=$("monthPicker").value;
-  if(!month){alert("Selecione o mês do relatório.");return}
-  const p=db.people[person]||{days:{},extras:[]};
-  const dates=Object.keys(p.days||{}).filter(d=>d.startsWith(month)).sort();
-  const ex=(p.extras||[]).filter(x=>x.date&&x.date.startsWith(month)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const mainCount=dates.reduce((n,d)=>n+fields.filter(f=>valueNum(p.days[d][f.id])!==null).length,0);
-  const alertCount=dates.reduce((n,d)=>n+fields.filter(f=>valueNum(p.days[d][f.id])>=180).length,0)+ex.filter(x=>valueNum(x.value)>=180).length;
-  const headers=fields.map(f=>`<th>${esc(f.label)}</th>`).join("");
-  const rows=dates.map(date=>{const d=p.days[date]||{};return `<tr><td>${fmtDate(date)}</td>${fields.map(f=>{const v=valueNum(d[f.id]);return `<td class="${v!==null&&v>=180?'flag':''}">${v??'—'}</td>`}).join("")}</tr>`}).join("");
-  const extraRows=ex.map(x=>`<tr><td>${fmtDate(x.date)} ${esc(x.time||"")}</td><td colspan="6" class="${valueNum(x.value)>=180?'flag':''}">${esc(x.value)} mg/dL${x.note?` — ${esc(x.note)}`:" — Medição adicional"}</td></tr>`).join("");
-  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório de Glicemia — ${esc(person)} — ${esc(month)}</title><style>body{font-family:Arial,sans-serif;color:#172b27;padding:16px}h1{font-size:20px}p{font-size:12px}.actions{margin:16px 0}button{padding:10px 14px;font-size:16px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #aaa;padding:6px;text-align:center}th{background:#e9f1ee}.flag{background:#ffe3e0;color:#9c1d1d;font-weight:bold}@media print{.actions{display:none}body{padding:0}table{font-size:9px}}</style></head><body><h1>Relatório mensal de glicemia</h1><p><strong>Pessoa:</strong> ${esc(person)} &nbsp; <strong>Mês:</strong> ${esc(month)}<br><strong>Dias com registros principais:</strong> ${dates.length} &nbsp; <strong>Medições:</strong> ${mainCount+ex.length} &nbsp; <strong>Valores ≥180 mg/dL:</strong> ${alertCount}</p><div class="actions"><button onclick="window.print()">Imprimir / Salvar PDF</button></div><table><thead><tr><th>Data</th>${headers}</tr></thead><tbody>${rows||'<tr><td colspan="7">Sem registros neste mês.</td></tr>'}${extraRows}</tbody></table><p>Os destaques são critérios de organização configurados pelo usuário e não representam diagnóstico.</p></body></html>`;
-  const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.style.display="none";document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
+let db=loadDb();
+let currentPerson=PEOPLE.includes(db.meta.lastPerson)?db.meta.lastPerson:PEOPLE[0];
+let extrasDraft=[];
+
+/* ---------- utilidades ---------- */
+function emptyPerson(){return {days:{},extras:[]}}
+function normalizeDb(x){
+  if(!x||typeof x!=="object")x={};
+  if(!x.people){x.people={[PEOPLE[0]]:{days:x.days||{},extras:x.extras||[]}};delete x.days;delete x.extras}
+  PEOPLE.forEach(n=>{const p=x.people[n]||(x.people[n]=emptyPerson());if(!p.days||typeof p.days!=="object")p.days={};if(!Array.isArray(p.extras))p.extras=[];
+    p.extras.forEach(e=>{if(!e.id)e.id=e.draftId||uid()})});
+  if(!x.meta||typeof x.meta!=="object")x.meta={};
+  return x;
 }
-$("printMonth").addEventListener("click",openPrintableReport);$("backup").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup-glicemia-"+today()+".json";a.click();URL.revokeObjectURL(a.href)});$("restore").addEventListener("change",async e=>{let f=e.target.files[0];if(!f)return;try{let imported=JSON.parse(await f.text());if(!confirm("Importar backup? Os dados atuais serão mesclados com o backup."))return;if(imported.people){PEOPLE.forEach(n=>{let p=imported.people[n];if(!p)return;db.people[n].days={...p.days,...db.people[n].days};db.people[n].extras=[...(p.extras||[]),...db.people[n].extras]})}else if(imported.days){db.people.Carlos.days={...imported.days,...db.people.Carlos.days};db.people.Carlos.extras=[...(imported.extras||[]),...db.people.Carlos.extras]}else throw Error("Formato inválido");persist();loadDay($("recordDate").value);renderMonthly();alert("Backup mesclado sem substituir os registros atuais.")}catch{alert("Não foi possível importar esse backup.")}e.target.value=""});$("excelImport").addEventListener("change",async e=>{let f=e.target.files[0];if(f)await importExcel(f);e.target.value=""});
-$("recordDate").value=today();$("monthPicker").value=today().slice(0,7);renderInputs();renderExtras();loadDay(today());renderMonthly();if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+function loadDb(){try{return normalizeDb(JSON.parse(localStorage.getItem(KEY)||"{}"))}catch{return normalizeDb({})}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(db));return true}catch(err){$("saveStatus").textContent="Não foi possível salvar. Exporte um backup e verifique o armazenamento do aparelho.";return false}}
+function personDb(p=currentPerson){return db.people[p]}
+function uid(){return (crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2))}
+function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function today(){return isoDate(new Date())}
+function fmtDate(s){if(!s)return "";const [y,m,d]=s.split("-");return `${d}/${m}/${y}`}
+function fmtDateTime(iso){const d=new Date(iso);return isNaN(d)?"":d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function isNil(v){return v===null||v===undefined||v===""}
+// Glicemia: inteiro >= 0
+function glic(v){if(isNil(v))return null;const n=Number(String(v).replace(",","."));return Number.isFinite(n)&&n>=0?Math.round(n):null}
+// Insulina em UI: aceita vírgula ou ponto, até 1 casa decimal, 0–300
+function units(v){if(isNil(v))return null;const n=Number(String(v).trim().replace(",","."));return Number.isFinite(n)&&n>=0&&n<=300?Math.round(n*10)/10:null}
+function fmtU(n){return n===null||n===undefined?"":String(n).replace(".",",")}
+function fmtAvg(n,dec=0){return n===null?"—":n.toLocaleString("pt-BR",{minimumFractionDigits:dec,maximumFractionDigits:dec})}
+function sum(arr){return arr.reduce((a,b)=>a+b,0)}
+function round1(n){return Math.round(n*10)/10}
+function monthLabel(ym){const [y,m]=ym.split("-").map(Number);const s=new Date(y,m-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});return s.charAt(0).toUpperCase()+s.slice(1)}
+const WD=["dom","seg","ter","qua","qui","sex","sáb"];
+function getDay(date,p=currentPerson){return personDb(p).days[date]||{}}
+function dayHasData(d){return DAY_KEYS.some(k=>!isNil(d[k]))}
+
+/* ---------- registro diário ---------- */
+function fillPeople(){const opts=PEOPLE.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");$("personSelect").innerHTML=opts;$("personSelectMonth").innerHTML=opts;$("personSelect").value=currentPerson;$("personSelectMonth").value=currentPerson}
+
+function renderInputs(){
+  $("mainMeasurements").innerHTML=FIELDS.map(f=>`<div class="measure" id="card-${f.id}">
+    <label for="${f.id}">${f.label}</label>
+    <input class="glic" type="number" min="0" step="1" inputmode="numeric" id="${f.id}" placeholder="mg/dL">
+    <small>Alerta visual a partir de ${HIGH}</small>
+    ${f.insulin?`<div class="ins-row">${INS_TYPES.map(t=>`<label>${t.label} (UI)<input type="text" inputmode="decimal" autocomplete="off" id="${insKey(t.k,f.id)}" data-ins placeholder="UI"></label>`).join("")}</div>`
+      :`<small class="noins">Sem aplicação de insulina nesta medição.</small>`}
+  </div>`).join("");
+  DAY_KEYS.forEach(k=>{$(k).addEventListener("input",autoSaveMain);$(k).addEventListener("change",autoSaveMain)});
+}
+function mainValues(){const out={};FIELDS.forEach(f=>out[f.id]=glic($(f.id).value));INS_FIELDS.forEach(f=>INS_TYPES.forEach(t=>{const k=insKey(t.k,f.id);out[k]=units($(k).value)}));return out}
+function markInvalidInsulin(){document.querySelectorAll("[data-ins]").forEach(el=>{const bad=!isNil(el.value)&&units(el.value)===null;el.style.borderColor=bad?"#d94b43":"";el.title=bad?"Valor inválido (use números, ex.: 10 ou 7,5)":""})}
+function writeMain(){
+  const date=$("recordDate").value;if(!date)return false;
+  const merged={...getDay(date),...mainValues(),updatedAt:new Date().toISOString()};
+  if(dayHasData(merged))personDb().days[date]=merged;else delete personDb().days[date];
+  return persist();
+}
+function autoSaveMain(){
+  renderComparisons();markInvalidInsulin();
+  if(writeMain()){$("saveStatus").textContent=`${currentPerson} • Salvo automaticamente • `+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});renderDayRecords();refreshMonthlyIfVisible()}
+}
+function renderComparisons(){
+  FIELDS.forEach(f=>{const n=glic($(f.id).value);$("card-"+f.id).classList.toggle("alert",n!==null&&n>=HIGH)});
+  $("comparisons").innerHTML=PAIRS.map(([a,b,n])=>{const x=glic($(a).value),y=glic($(b).value);
+    if(x===null||y===null)return `<div>${n}: preencha as duas medições para comparar.</div>`;
+    const diff=y-x,big=Math.abs(diff)>VAR_LIMIT;
+    return `<div class="${big?"flag":""}" style="padding:5px;margin-top:3px;border-radius:5px">${n}: ${diff>0?"+":""}${diff} mg/dL ${big?`— variação superior a ${VAR_LIMIT}`:`— variação até ${VAR_LIMIT}`}</div>`}).join("");
+}
+function loadDay(date){
+  $("recordDate").value=date;const d=getDay(date);
+  FIELDS.forEach(f=>$(f.id).value=d[f.id]??"");
+  INS_FIELDS.forEach(f=>INS_TYPES.forEach(t=>{const k=insKey(t.k,f.id);$(k).value=fmtU(d[k]??null)}));
+  extrasDraft=personDb().extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||""))
+    .map(x=>({id:x.id,time:x.time||"",value:x.value??"",nph:fmtU(x.nph??null),rap:fmtU(x.rap??null),note:x.note||""}));
+  renderExtras();renderComparisons();markInvalidInsulin();renderDayRecords();
+}
+
+/* ---------- medições/aplicações adicionais ---------- */
+function renderExtras(){
+  $("extrasHead").classList.toggle("hidden",!extrasDraft.length);
+  $("extras").innerHTML=extrasDraft.map((x,i)=>`<div class="extra-row">
+    <input type="time" aria-label="Horário" value="${esc(x.time)}" data-i="${i}" data-k="time">
+    <input type="number" min="0" step="1" inputmode="numeric" placeholder="mg/dL" value="${esc(x.value)}" data-i="${i}" data-k="value">
+    <input type="text" inputmode="decimal" placeholder="NPH" value="${esc(x.nph)}" data-i="${i}" data-k="nph">
+    <input type="text" inputmode="decimal" placeholder="Ráp." value="${esc(x.rap)}" data-i="${i}" data-k="rap">
+    <button class="danger" data-remove="${i}" aria-label="Excluir">×</button>
+    <input class="x-note" type="text" placeholder="Observação (ex.: antes de dormir, lanche)" value="${esc(x.note)}" data-i="${i}" data-k="note">
+  </div>`).join("");
+  $("extras").querySelectorAll("input").forEach(el=>{const h=()=>{const i=+el.dataset.i;extrasDraft[i][el.dataset.k]=el.value;upsertExtra(i)};el.addEventListener("input",h);el.addEventListener("change",h)});
+  $("extras").querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{
+    const i=+b.dataset.remove,item=extrasDraft[i];
+    const hasData=item&&(item.time||!isNil(item.value)||!isNil(item.nph)||!isNil(item.rap));
+    if(hasData&&!confirm("Excluir este registro adicional?"))return;
+    personDb().extras=personDb().extras.filter(x=>x.id!==item.id);persist();
+    extrasDraft.splice(i,1);renderExtras();renderDayRecords();refreshMonthlyIfVisible();
+  }));
+}
+function upsertExtra(i){
+  const date=$("recordDate").value;const x=extrasDraft[i];if(!date||!x)return;
+  const rec={id:x.id,date,time:x.time,value:glic(x.value),nph:units(x.nph),rap:units(x.rap),note:x.note||"",updatedAt:new Date().toISOString()};
+  const valid=rec.time&&(rec.value!==null||rec.nph!==null||rec.rap!==null);
+  const list=personDb().extras,idx=list.findIndex(e=>e.id===x.id);
+  if(valid){if(idx>=0)list[idx]={...list[idx],...rec};else list.push({...rec,createdAt:rec.updatedAt})}
+  else if(idx>=0)list.splice(idx,1);
+  if(persist()){$("saveStatus").textContent=valid?`${currentPerson} • Registro adicional salvo`:"Registro adicional incompleto (informe horário e um valor).";renderDayRecords();refreshMonthlyIfVisible()}
+}
+
+function renderDayRecords(){
+  const date=$("recordDate").value;const d=getDay(date);const rows=[];let tn=0,tr=0,hasIns=false;
+  FIELDS.forEach(f=>{const g=glic(d[f.id]);const n=f.insulin?units(d[insKey("nph",f.id)]):null,r=f.insulin?units(d[insKey("rap",f.id)]):null;
+    if(g===null&&n===null&&r===null)return;if(n!==null){tn+=n;hasIns=true}if(r!==null){tr+=r;hasIns=true}
+    rows.push(`<tr><td>${esc(f.label)}</td><td class="${g!==null&&g>=HIGH?"flag":""}">${g??"—"}</td><td>${fmtU(n)||"—"}</td><td>${fmtU(r)||"—"}</td></tr>`)});
+  personDb().extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||"")).forEach(x=>{const g=glic(x.value),n=units(x.nph),r=units(x.rap);
+    if(n!==null){tn+=n;hasIns=true}if(r!==null){tr+=r;hasIns=true}
+    rows.push(`<tr><td>${esc(x.time)} ${esc(x.note||"Adicional")}</td><td class="${g!==null&&g>=HIGH?"flag":""}">${g??"—"}</td><td>${fmtU(n)||"—"}</td><td>${fmtU(r)||"—"}</td></tr>`)});
+  if(hasIns)rows.push(`<tr><th>Total de insulina do dia</th><th></th><th>${fmtU(round1(tn))}</th><th>${fmtU(round1(tr))}</th></tr>`);
+  $("dayRecords").innerHTML=rows.length?`<table class="simple"><thead><tr><th>Medição / horário</th><th>mg/dL</th><th>NPH (UI)</th><th>Rápida (UI)</th></tr></thead><tbody>${rows.join("")}</tbody></table>`:"<p class='note'>Nenhum registro salvo nesta data.</p>";
+}
+
+/* ---------- relatório mensal (tela e impressão usam o mesmo HTML) ---------- */
+function monthData(person,ym){
+  const p=personDb(person);const [y,m]=ym.split("-").map(Number);const nDays=new Date(y,m,0).getDate();
+  const list=[];
+  for(let dd=1;dd<=nDays;dd++){const date=`${ym}-${String(dd).padStart(2,"0")}`;const d=p.days[date]||{};
+    const ex=p.extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+    const g={},ins={};FIELDS.forEach(f=>{g[f.id]=glic(d[f.id]);if(f.insulin)INS_TYPES.forEach(t=>ins[insKey(t.k,f.id)]=units(d[insKey(t.k,f.id)]))});
+    const allN=[...INS_FIELDS.map(f=>ins[insKey("nph",f.id)]),...ex.map(x=>units(x.nph))].filter(v=>v!==null);
+    const allR=[...INS_FIELDS.map(f=>ins[insKey("rap",f.id)]),...ex.map(x=>units(x.rap))].filter(v=>v!==null);
+    list.push({date,dow:new Date(y,m-1,dd).getDay(),g,ins,ex,totN:allN.length?round1(sum(allN)):null,totR:allR.length?round1(sum(allR)):null,
+      has:dayHasData(d)||ex.length>0});
+  }
+  return list;
+}
+function stats(vals){const v=vals.filter(x=>x!==null);if(!v.length)return {n:0,avg:null,min:null,max:null,high:0};return {n:v.length,avg:sum(v)/v.length,min:Math.min(...v),max:Math.max(...v),high:v.filter(x=>x>=HIGH).length}}
+
+function buildReport(person,ym,opt){
+  const showIns=opt.insulin, days=monthData(person,ym);
+  const rows=opt.allDays?days:days.filter(d=>d.has);
+  const withData=days.filter(d=>d.has);
+  const extras=days.flatMap(d=>d.ex.map(x=>({...x})));
+  const extraG=extras.map(x=>glic(x.value));
+  const nMeas=sum(FIELDS.map(f=>days.filter(d=>d.g[f.id]!==null).length))+extraG.filter(v=>v!==null).length;
+  const nHigh=sum(FIELDS.map(f=>days.filter(d=>d.g[f.id]!==null&&d.g[f.id]>=HIGH).length))+extraG.filter(v=>v!==null&&v>=HIGH).length;
+  const hasExtraIns=extras.some(x=>units(x.nph)!==null||units(x.rap)!==null);
+
+  // Cabeçalho da tabela
+  let h1=`<th rowspan="2">Dia</th>`,h2="";
+  FIELDS.forEach(f=>{const span=showIns&&f.insulin?3:1;h1+=`<th class="gs" colspan="${span}">${esc(f.short)}</th>`;h2+=`<th class="gs">mg/dL</th>`;if(showIns&&f.insulin)INS_TYPES.forEach(t=>h2+=`<th class="u">${t.short}</th>`)});
+  if(showIns){h1+=`<th class="gs u" colspan="2">Total dia (UI)${hasExtraIns?"*":""}</th>`;h2+=`<th class="gs u">NPH</th><th class="u">Ráp.</th>`}
+  h1+=`<th class="gs" rowspan="2">Adicionais</th>`;
+
+  const body=rows.map(d=>{
+    let tds=`<td class="day">${d.date.slice(8)}<span>${WD[d.dow]}</span></td>`;
+    FIELDS.forEach(f=>{const v=d.g[f.id];let cls="gs",extra="";
+      if(v!==null&&v>=HIGH)cls+=" flag";
+      const pre=POST_OF[f.id];if(pre&&v!==null&&d.g[pre]!==null){const diff=v-d.g[pre];if(Math.abs(diff)>VAR_LIMIT)extra=`<span class="dv">${diff>0?"+":""}${diff}</span>`}
+      tds+=`<td class="${cls}">${v??""}${extra}</td>`;
+      if(showIns&&f.insulin)INS_TYPES.forEach(t=>tds+=`<td class="u">${fmtU(d.ins[insKey(t.k,f.id)])}</td>`)});
+    if(showIns)tds+=`<td class="gs u tot">${fmtU(d.totN)}</td><td class="u tot">${fmtU(d.totR)}</td>`;
+    tds+=`<td class="gs ex">${d.ex.length?d.ex.map(x=>esc(x.time)+(glic(x.value)!==null?" "+glic(x.value):"")).join("; "):""}</td>`;
+    return `<tr class="${[0,6].includes(d.dow)?"we":""} ${d.has?"":"empty"}">${tds}</tr>`}).join("");
+
+  // Linha de médias
+  let foot=`<td class="day">Média</td>`;
+  FIELDS.forEach(f=>{const s=stats(days.map(d=>d.g[f.id]));foot+=`<td class="gs">${fmtAvg(s.avg)}</td>`;
+    if(showIns&&f.insulin)INS_TYPES.forEach(t=>{const s2=stats(days.map(d=>d.ins[insKey(t.k,f.id)]));foot+=`<td class="u">${s2.n?fmtAvg(s2.avg,1):""}</td>`})});
+  if(showIns){const sn=stats(days.map(d=>d.totN)),sr=stats(days.map(d=>d.totR));foot+=`<td class="gs u">${sn.n?fmtAvg(sn.avg,1):""}</td><td class="u">${sr.n?fmtAvg(sr.avg,1):""}</td>`}
+  foot+=`<td class="gs"></td>`;
+
+  // Estatísticas por horário
+  const statRows=FIELDS.map(f=>{const s=stats(days.map(d=>d.g[f.id]));return `<tr><td>${esc(f.label)}</td><td>${s.n}</td><td>${fmtAvg(s.avg)}</td><td>${s.min??"—"}</td><td>${s.max??"—"}</td><td>${s.high}</td></tr>`}).join("")
+    +(()=>{const s=stats(extraG);return s.n?`<tr><td>Adicionais</td><td>${s.n}</td><td>${fmtAvg(s.avg)}</td><td>${s.min}</td><td>${s.max}</td><td>${s.high}</td></tr>`:""})();
+  const varRows=PAIRS.map(([a,b,n])=>{const ds=days.filter(d=>d.g[a]!==null&&d.g[b]!==null);const big=ds.filter(d=>Math.abs(d.g[b]-d.g[a])>VAR_LIMIT).length;const avgDiff=ds.length?sum(ds.map(d=>d.g[b]-d.g[a]))/ds.length:null;
+    return `<tr><td>${n}</td><td>${ds.length}</td><td>${avgDiff===null?"—":(avgDiff>0?"+":"")+fmtAvg(avgDiff)}</td><td>${big}</td></tr>`}).join("");
+  let insBlock="";
+  if(showIns){
+    const tN=days.map(d=>d.totN).filter(v=>v!==null),tR=days.map(d=>d.totR).filter(v=>v!==null);
+    const daysIns=days.filter(d=>d.totN!==null||d.totR!==null).length;
+    insBlock=`<div><h3>Insulina no mês (UI)</h3><table class="st"><thead><tr><th></th><th>NPH</th><th>Rápida</th></tr></thead><tbody>
+      <tr><td>Total aplicado</td><td>${tN.length?fmtU(round1(sum(tN))):"—"}</td><td>${tR.length?fmtU(round1(sum(tR))):"—"}</td></tr>
+      <tr><td>Média por dia com aplicação</td><td>${tN.length?fmtAvg(sum(tN)/tN.length,1):"—"}</td><td>${tR.length?fmtAvg(sum(tR)/tR.length,1):"—"}</td></tr>
+      <tr><td>Dias com aplicação</td><td colspan="2">${daysIns}</td></tr></tbody></table></div>`;
+  }
+  const extrasTable=extras.length?`<div class="extras-sec" style="margin-top:10px;break-inside:avoid;page-break-inside:avoid"><h3>Medições / aplicações adicionais</h3><table class="st"><thead><tr><th>Data</th><th>Horário</th><th>mg/dL</th>${showIns?"<th>NPH</th><th>Rápida</th>":""}<th style="text-align:left">Observação</th></tr></thead><tbody>${
+    extras.map(x=>{const g=glic(x.value);return `<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time)}</td><td class="${g!==null&&g>=HIGH?"flag":""}" style="${g!==null&&g>=HIGH?"background:#ffd6d0;font-weight:800;color:#8a1010":""}">${g??"—"}</td>${showIns?`<td>${fmtU(units(x.nph))||"—"}</td><td>${fmtU(units(x.rap))||"—"}</td>`:""}<td style="text-align:left">${esc(x.note)}</td></tr>`}).join("")}</tbody></table></div>`:"";
+
+  return `<div class="report">
+  <div class="rhead"><div><h1>Controle de glicemia${showIns?" e insulina":""} — ${esc(monthLabel(ym))}</h1>
+    <div class="who"><strong>${esc(person)}</strong> • ${withData.length} dia(s) com registro • ${nMeas} medição(ões) • ${nHigh} valor(es) ≥${HIGH} mg/dL</div></div>
+    <div class="meta">Glicemia em mg/dL • Insulina em UI<br>Gerado em ${esc(fmtDateTime(new Date().toISOString()))}<br>Controle de Glicemia v${APP_VERSION}</div></div>
+  <div class="rtwrap"><table class="rt"><thead><tr>${h1}</tr><tr class="sub">${h2}</tr></thead><tbody>${body||`<tr><td colspan="40">Sem registros neste mês.</td></tr>`}</tbody><tfoot><tr>${foot}</tr></tfoot></table></div>
+  <div class="cols">
+    <div><h3>Glicemia por horário (mg/dL)</h3><table class="st"><thead><tr><th>Horário</th><th>Nº</th><th>Média</th><th>Mín.</th><th>Máx.</th><th>≥${HIGH}</th></tr></thead><tbody>${statRows}</tbody></table></div>
+    <div><h3>Variação antes → 2h após</h3><table class="st"><thead><tr><th>Refeição</th><th>Dias</th><th>Variação média</th><th>Dias &gt;${VAR_LIMIT}</th></tr></thead><tbody>${varRows}</tbody></table></div>
+    ${insBlock}
+  </div>
+  ${extrasTable}
+  <div class="legend"><b class="f">123</b> glicemia ≥${HIGH} mg/dL • número pequeno abaixo do valor 2h após = diferença em relação ao “antes” quando superior a ${VAR_LIMIT} mg/dL${showIns&&hasExtraIns?" • * o total do dia inclui as aplicações adicionais":""} • a medição 2h após o jantar não tem aplicação. Critérios de organização definidos pelo usuário; não representam diagnóstico.</div>
+</div>`;
+}
+function reportOptions(){return {allDays:$("optAllDays").checked,insulin:$("optInsulin").checked}}
+function renderMonthly(){const ym=$("monthPicker").value;if(!ym){$("monthReport").innerHTML="";return}$("monthReport").innerHTML=buildReport(currentPerson,ym,reportOptions())}
+function refreshMonthlyIfVisible(){if(!$("monthly").classList.contains("hidden"))renderMonthly()}
+function printMonth(){if(!$("monthPicker").value){alert("Selecione o mês do relatório.");return}renderMonthly();setTimeout(()=>window.print(),50)}
+function openReportTab(){
+  const ym=$("monthPicker").value;if(!ym){alert("Selecione o mês do relatório.");return}
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Glicemia ${esc(currentPerson)} ${esc(ym)}</title><style>body{margin:12px;background:#fff}.bar{margin-bottom:10px}.bar button{padding:10px 14px;font-size:16px}@media print{.bar{display:none}body{margin:0}}${$("reportCss").textContent}</style></head><body><div class="bar"><button onclick="window.print()">Imprimir / Salvar PDF</button></div>${buildReport(currentPerson,ym,reportOptions())}</body></html>`;
+  const url=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));
+  const w=window.open(url,"_blank");if(!w){const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
+  setTimeout(()=>URL.revokeObjectURL(url),120000);
+}
+
+/* ---------- arquivos: compartilhar (iPhone) ou baixar ---------- */
+async function deliverFile(blob,filename,title){
+  try{const file=new File([blob],filename,{type:blob.type});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title});return true}}
+  catch(e){if(e&&e.name==="AbortError")return false}
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);return true;
+}
+
+/* ---------- backup ---------- */
+function backupPayload(){return {app:"controle-glicemia",schema:2,version:APP_VERSION,exportedAt:new Date().toISOString(),people:db.people}}
+async function exportBackup(){
+  const stamp=new Date();const name=`backup-glicemia-${today()}-${String(stamp.getHours()).padStart(2,"0")}${String(stamp.getMinutes()).padStart(2,"0")}.json`;
+  const ok=await deliverFile(new Blob([JSON.stringify(backupPayload(),null,2)],{type:"application/json"}),name,"Backup Controle de Glicemia");
+  if(ok){db.meta.lastBackupAt=new Date().toISOString();persist();renderBackupInfo()}
+}
+function countPerson(p){return {days:Object.keys(p.days||{}).length,extras:(p.extras||[]).length}}
+function parseBackup(obj){
+  let people;
+  if(obj&&obj.people&&typeof obj.people==="object")people=obj.people;
+  else if(obj&&obj.days)people={[PEOPLE[0]]:{days:obj.days,extras:obj.extras||[]}};
+  else throw new Error("Formato inválido");
+  const clean={};PEOPLE.forEach(n=>{const p=people[n]||{};clean[n]={days:(p.days&&typeof p.days==="object")?p.days:{},extras:Array.isArray(p.extras)?p.extras:[]}});
+  return {people:clean,exportedAt:obj.exportedAt||null,version:obj.version||"anterior à 5.0"};
+}
+function extraSig(x){return [x.date,x.time,glic(x.value),units(x.nph),units(x.rap)].join("|")}
+function mergeInto(target,incoming){
+  const st={daysAdded:0,fieldsAdded:0,conflicts:0,extrasAdded:0};
+  PEOPLE.forEach(n=>{const L=target.people[n],I=incoming.people[n];
+    Object.entries(I.days).forEach(([date,d])=>{if(!d||typeof d!=="object")return;
+      if(!L.days[date]){if(dayHasData(d)){L.days[date]={...d};st.daysAdded++}return}
+      const ld=L.days[date];let changed=false;
+      DAY_KEYS.forEach(k=>{if(isNil(d[k]))return;if(isNil(ld[k])){ld[k]=d[k];st.fieldsAdded++;changed=true}else if(String(ld[k])!==String(d[k]))st.conflicts++});
+      if(changed)ld.updatedAt=new Date().toISOString()});
+    const ids=new Set(L.extras.map(x=>x.id)),sigs=new Set(L.extras.map(extraSig));
+    I.extras.forEach(x=>{if(!x||!x.date)return;const id=x.id||x.draftId;if((id&&ids.has(id))||sigs.has(extraSig(x)))return;
+      const rec={...x,id:id||uid()};L.extras.push(rec);ids.add(rec.id);sigs.add(extraSig(rec));st.extrasAdded++})});
+  return st;
+}
+function saveUndo(label){try{localStorage.setItem(UNDO_KEY,JSON.stringify({savedAt:new Date().toISOString(),label,db}))}catch{} renderBackupInfo()}
+async function restoreFromFile(file,mode){
+  let inc;try{inc=parseBackup(JSON.parse(await file.text()))}catch{alert("Não foi possível ler esse backup. Confira se é um arquivo .json exportado por este aplicativo.");return}
+  const summary=PEOPLE.map(n=>{const c=countPerson(inc.people[n]);return `${n}: ${c.days} dia(s), ${c.extras} registro(s) adicional(is)`}).join("\n");
+  const head=`Backup ${inc.exportedAt?"de "+fmtDateTime(inc.exportedAt):"sem data"} (versão ${inc.version})\n${summary}\n\n`;
+  if(mode==="replace"){
+    if(!confirm(head+"SUBSTITUIR todos os dados atuais pelos do backup?\nRegistros que existem só no aparelho serão removidos (fica uma cópia para desfazer)."))return;
+    saveUndo("substituição");db.people=normalizeDb({people:inc.people}).people;persist();afterDataChange();
+    alert("Dados substituídos pelo backup.");return;
+  }
+  if(!confirm(head+"Mesclar com os dados atuais?\nSó serão preenchidos campos vazios; nada que já está no aparelho será alterado."))return;
+  saveUndo("mesclagem");const st=mergeInto(db,inc);normalizeDb(db);persist();afterDataChange();
+  alert(`Backup mesclado.\nDias novos: ${st.daysAdded}\nValores preenchidos em dias existentes: ${st.fieldsAdded}\nRegistros adicionais incluídos: ${st.extrasAdded}\nValores diferentes mantidos como estão no aparelho: ${st.conflicts}`);
+}
+function undoRestore(){
+  let u;try{u=JSON.parse(localStorage.getItem(UNDO_KEY)||"null")}catch{u=null}
+  if(!u||!u.db){alert("Não há restauração para desfazer.");return}
+  if(!confirm(`Voltar os dados para como estavam antes da ${u.label} de ${fmtDateTime(u.savedAt)}?`))return;
+  const meta=db.meta;db=normalizeDb(u.db);db.meta={...db.meta,lastBackupAt:meta.lastBackupAt};persist();localStorage.removeItem(UNDO_KEY);afterDataChange();alert("Restauração desfeita.");
+}
+function renderBackupInfo(){
+  const last=db.meta.lastBackupAt;const c=PEOPLE.map(n=>{const k=countPerson(db.people[n]);return `${n}: ${k.days} dia(s)`}).join(" • ");
+  $("backupInfo").innerHTML=`Último backup exportado neste aparelho: <strong>${last?esc(fmtDateTime(last)):"nunca"}</strong><br>${esc(c)}`;
+  const hasData=PEOPLE.some(n=>countPerson(db.people[n]).days>0);
+  const age=last?(Date.now()-new Date(last).getTime())/864e5:Infinity;
+  const b=$("backupBanner");
+  if(hasData&&age>BACKUP_REMIND_DAYS){b.innerHTML=`<span>${last?`Último backup há ${Math.floor(age)} dias.`:"Nenhum backup exportado ainda."} Os dados existem só neste aparelho.</span><button id="bannerBackup">Fazer backup agora</button>`;b.classList.remove("hidden");$("bannerBackup").onclick=exportBackup}
+  else b.classList.add("hidden");
+  let u=null;try{u=JSON.parse(localStorage.getItem(UNDO_KEY)||"null")}catch{}
+  $("undoRestore").classList.toggle("hidden",!u);
+}
+function afterDataChange(){loadDay($("recordDate").value);refreshMonthlyIfVisible();renderBackupInfo()}
+
+/* ---------- Excel (carregado só quando necessário) ---------- */
+let xlsxPromise=null;
+function ensureXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);if(!xlsxPromise)xlsxPromise=new Promise((res,rej)=>{const s=document.createElement("script");s.src=XLSX_URL;s.onload=()=>res(window.XLSX);s.onerror=()=>{xlsxPromise=null;rej(new Error("xlsx"))};document.head.appendChild(s)});return xlsxPromise}
+function norm(s){return String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim()}
+const HEADER_MAP=(()=>{const m={};FIELDS.forEach(f=>{m[norm(f.label)]=f.id;if(f.insulin)INS_TYPES.forEach(t=>m[norm(`${t.label} ${f.label}`)]=insKey(t.k,f.id))});return m})();
+function excelHeader(){return ["Data",...FIELDS.map(f=>f.label),...INS_FIELDS.flatMap(f=>INS_TYPES.map(t=>`${t.label} ${f.label}`)),"Total NPH do dia","Total Rápida do dia"]}
+async function exportExcel(){
+  $("monthStatus").textContent="Preparando planilha…";
+  let X;try{X=await ensureXLSX()}catch{$("monthStatus").textContent="";alert("Não foi possível carregar o gerador de Excel. Verifique a conexão com a internet.");return}
+  const p=personDb(),months=new Set([...Object.keys(p.days),...p.extras.map(x=>x.date)].filter(Boolean).map(d=>d.slice(0,7)));
+  if(!months.size){$("monthStatus").textContent="";alert(`Não há registros de ${currentPerson} para exportar.`);return}
+  const wb=X.utils.book_new();
+  [...months].sort().forEach(ym=>{const days=monthData(currentPerson,ym).filter(d=>d.has);
+    const aoa=[excelHeader(),...days.map(d=>[fmtDate(d.date),...FIELDS.map(f=>d.g[f.id]),...INS_FIELDS.flatMap(f=>INS_TYPES.map(t=>d.ins[insKey(t.k,f.id)])),d.totN,d.totR])];
+    const ws=X.utils.aoa_to_sheet(aoa);ws["!cols"]=aoa[0].map((h,i)=>({wch:i===0?11:Math.max(8,Math.min(22,h.length))}));
+    X.utils.book_append_sheet(wb,ws,ym.slice(5,7)+ym.slice(0,4))});
+  const ex=[...p.extras].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(ex.length){const ws=X.utils.aoa_to_sheet([["Data","Horário","Glicemia (mg/dL)","NPH (UI)","Rápida (UI)","Observação"],...ex.map(x=>[fmtDate(x.date),x.time,glic(x.value),units(x.nph),units(x.rap),x.note||""])]);ws["!cols"]=[{wch:11},{wch:8},{wch:16},{wch:9},{wch:11},{wch:30}];X.utils.book_append_sheet(wb,ws,"Adicionais")}
+  const out=X.write(wb,{bookType:"xlsx",type:"array"});
+  $("monthStatus").textContent="";
+  await deliverFile(new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`glicemia-${currentPerson}-${today()}.xlsx`,"Planilha de glicemia");
+}
+function normalizeDate(v,X){
+  if(v instanceof Date)return isoDate(v);
+  if(typeof v==="number"&&X){const d=X.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`}
+  const s=String(v||"").trim();let m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  m=s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);if(m)return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;return null;
+}
+async function importExcel(file){
+  let X;try{X=await ensureXLSX()}catch{alert("O leitor de Excel não foi carregado. Verifique a conexão com a internet e tente novamente.");return}
+  try{
+    const wb=X.read(await file.arrayBuffer(),{type:"array",cellDates:true});const target=personDb();let added=0,skipped=0;
+    for(const sheetName of wb.SheetNames){
+      if(!/^\d{6}$/.test(sheetName))continue;
+      const data=X.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:null,raw:true});if(data.length<2)continue;
+      const col={};(data[0]||[]).forEach((h,i)=>{const k=HEADER_MAP[norm(h)];if(k&&col[k]===undefined)col[k]=i});
+      if(!FIELDS.some(f=>col[f.id]!==undefined))FIELDS.forEach((f,i)=>col[f.id]=i+1); // planilhas antigas: posição fixa
+      for(let r=1;r<data.length;r++){const row=data[r]||[];const date=normalizeDate(row[0],X);if(!date)continue;
+        const vals={};Object.entries(col).forEach(([k,i])=>{const v=k.includes("_")?units(row[i]):glic(row[i]);if(v!==null)vals[k]=v});
+        if(!Object.keys(vals).length)continue;
+        const ex=target.days[date]||{};let changed=false;
+        Object.entries(vals).forEach(([k,v])=>{if(isNil(ex[k])){ex[k]=v;changed=true;added++}else skipped++});
+        if(changed)target.days[date]={...ex,updatedAt:new Date().toISOString(),importedFrom:file.name}}
+    }
+    persist();afterDataChange();
+    alert(`Importação concluída para ${currentPerson}.\nValores adicionados: ${added}\nCélulas ignoradas por já terem valor: ${skipped}\nOs dados existentes foram preservados.`);
+  }catch(err){console.error(err);alert("Não foi possível ler a planilha. Confira se é um arquivo Excel .xlsx válido.")}
+}
+
+/* ---------- eventos ---------- */
+function setPerson(p){currentPerson=p;db.meta.lastPerson=p;persist();$("personSelect").value=p;$("personSelectMonth").value=p;loadDay($("recordDate").value);refreshMonthlyIfVisible();$("saveStatus").textContent=`Exibindo registros de ${p}.`}
+function showTab(t){const m=t==="month";$("daily").classList.toggle("hidden",m);$("monthly").classList.toggle("hidden",!m);$("tabDaily").classList.toggle("active",!m);$("tabMonth").classList.toggle("active",m);if(m){renderMonthly();ensureXLSX().catch(()=>{})}window.scrollTo(0,0)}
+
+$("save").addEventListener("click",()=>{if(writeMain()){extrasDraft.forEach((_,i)=>upsertExtra(i));$("saveStatus").textContent=`Registros de ${currentPerson} salvos em ${fmtDate($("recordDate").value)}.`;renderDayRecords()}});
+$("clear").addEventListener("click",()=>{DAY_KEYS.forEach(k=>$(k).value="");renderComparisons();$("saveStatus").textContent="Campos limpos na tela. Os dados já salvos não foram apagados."});
+$("addExtra").addEventListener("click",()=>{extrasDraft.push({id:uid(),time:new Date().toTimeString().slice(0,5),value:"",nph:"",rap:"",note:""});renderExtras()});
+$("loadDate").addEventListener("click",()=>loadDay($("recordDate").value));
+$("recordDate").addEventListener("change",()=>loadDay($("recordDate").value));
+$("personSelect").addEventListener("change",e=>setPerson(e.target.value));
+$("personSelectMonth").addEventListener("change",e=>setPerson(e.target.value));
+$("tabDaily").addEventListener("click",()=>showTab("daily"));
+$("tabMonth").addEventListener("click",()=>showTab("month"));
+$("monthPicker").addEventListener("change",renderMonthly);
+$("optAllDays").addEventListener("change",renderMonthly);
+$("optInsulin").addEventListener("change",renderMonthly);
+$("printMonth").addEventListener("click",printMonth);
+$("openReport").addEventListener("click",openReportTab);
+$("exportExcel").addEventListener("click",exportExcel);
+$("backup").addEventListener("click",exportBackup);
+$("restore").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"merge");e.target.value=""});
+$("restoreReplace").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"replace");e.target.value=""});
+$("undoRestore").addEventListener("click",undoRestore);
+$("excelImport").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await importExcel(f);e.target.value=""});
+window.addEventListener("beforeprint",()=>{if($("monthPicker").value)renderMonthly()});
+
+/* ---------- início ---------- */
+fillPeople();renderInputs();
+$("recordDate").value=today();$("monthPicker").value=today().slice(0,7);
+loadDay(today());renderBackupInfo();
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body></html>

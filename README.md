@@ -1,4 +1,4 @@
-# Controle de Glicemia — versão inicial
+# Controle de Glicemia
 
 ## O que esta versão faz
 - Registra e salva automaticamente as seis medições principais por data.
@@ -38,3 +38,39 @@ A versão atual adiciona carregamento automático ao selecionar a data e salvame
 - Salvamento automático das medições principais ao digitar e ao alterar o campo.
 - Carregamento automático dos registros ao selecionar outra data.
 - Service worker atualizado para invalidar o cache das versões anteriores.
+
+## Versão 4.0
+- Permite alternar entre Carlos e Rosana, mantendo registros separados por pessoa.
+- Migra automaticamente os registros da versão 3 para Carlos, sem apagar o histórico existente.
+- Importa planilhas Excel (.xlsx/.xls) usando as abas mensais no formato MMYYYY e os seis campos principais.
+- Mescla dados importados somente em campos ainda vazios; registros já preenchidos no app são preservados.
+- Backup JSON inclui os dados de ambos. A restauração mescla os dados sem substituir registros existentes.
+- O leitor Excel é carregado de CDN e requer conexão com a internet no momento da importação.
+
+## Versão 5.0
+### Insulina (NPH e Rápida, em UI)
+- Campos de NPH e Rápida em cada medição principal, exceto “2h após o jantar” (última do dia, antes de dormir), que não tem aplicação.
+- Aceita decimais com vírgula ou ponto (ex.: 7,5). Valores fora de 0–300 UI são marcados em vermelho e não são salvos.
+- As medições adicionais também aceitam NPH e Rápida (para aplicações fora dos horários fixos).
+- Total de insulina por dia no resumo da data e no relatório mensal.
+
+### Relatório mensal / impressão
+- Mesma tabela na tela e no papel, em A4 paisagem, com cabeçalho repetido se houver mais de uma página.
+- Lista todos os dias do mês (com dia da semana e fins de semana sombreados), deixando em branco os dias sem registro — dá para anotar à mão.
+- Destaques ≥180 mg/dL e diferença “antes → 2h após” superior a 30 mg/dL impressa abaixo do valor (legível mesmo em impressora preto e branco).
+- Linha de médias, tabela por horário (nº, média, mín., máx., ≥180), variação por refeição e totais/médias de insulina.
+- Opção “Abrir relatório em nova aba” como alternativa caso o diálogo de impressão não abra no iPhone.
+- Exportação para Excel (uma aba por mês no formato MMAAAA + aba de adicionais), compatível com a importação do próprio app.
+
+### Backup
+- No iPhone, “Exportar backup” abre o menu Compartilhar (Salvar em Arquivos, iCloud Drive, WhatsApp, e-mail).
+- Aviso quando o último backup tem mais de 7 dias.
+- Restauração corrigida: agora mescla campo a campo (antes, um dia já existente no aparelho ignorava todo o dia do backup) e não duplica medições adicionais ao restaurar o mesmo arquivo duas vezes.
+- Opção “Substituir tudo por um backup” e “Desfazer última restauração” (cópia de segurança automática antes de restaurar).
+- O app pede ao navegador armazenamento persistente para reduzir o risco de os dados serem apagados automaticamente.
+
+### Outras correções
+- Medições adicionais salvas voltam a aparecer para edição/exclusão ao reabrir a data.
+- Service worker passa a buscar a versão nova primeiro (as atualizações chegam ao iPhone na próxima abertura com internet).
+- A biblioteca de Excel só é carregada quando necessária (o app abre mais rápido e funciona offline).
+- Dados das versões anteriores são lidos sem nenhuma conversão manual.
