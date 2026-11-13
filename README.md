@@ -74,3 +74,11 @@ A versão atual adiciona carregamento automático ao selecionar a data e salvame
 - Service worker passa a buscar a versão nova primeiro (as atualizações chegam ao iPhone na próxima abertura com internet).
 - A biblioteca de Excel só é carregada quando necessária (o app abre mais rápido e funciona offline).
 - Dados das versões anteriores são lidos sem nenhuma conversão manual.
+
+## Versão 5.1
+- Novo horário de aplicação **“Antes de dormir”** (somente insulina, sem medição).
+- **Esquema de insulina por pessoa**, no Registro diário: marque em quais horários há aplicação e de qual insulina (NPH e/ou Rápida). Padrão: NPH e Rápida antes do café, do almoço, do jantar e antes de dormir. As medições 2h após as refeições ficam sem aplicação.
+- Quando o médico mudar a prescrição, basta alterar o esquema. Os registros antigos não se perdem: se um dia tem valor num horário que saiu do esquema, o campo continua aparecendo naquele dia e no relatório do mês.
+- O relatório mensal e o Excel montam as colunas de insulina conforme o esquema e os dados do mês.
+- O esquema é salvo no backup e restaurado com ele.
+- Correção: ao trocar de pessoa ou de data com um campo ainda em edição, o valor podia ser gravado na pessoa ou data errada. Agora cada tela grava sempre na pessoa e na data em que foi aberta.

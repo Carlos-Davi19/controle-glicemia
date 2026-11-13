@@ -35,6 +35,8 @@ button.danger{background:#a93333}button:disabled{opacity:.5}
 .ins-row label{font-size:11px;font-weight:650;color:var(--ins);display:flex;flex-direction:column;gap:3px}
 .ins-row input{width:100%;padding:8px;font-size:16px;border-color:#b9c7de;background:#f6f8fd}
 .noins{font-style:italic}
+.measure.bed{background:#f6f8fd;border-color:#b9c7de}
+.plan{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}.plan th,.plan td{border-bottom:1px solid var(--line);padding:9px 6px;text-align:center}.plan td:first-child,.plan th:first-child{text-align:left}.plan input{width:22px;height:22px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions>*{flex:1}
 .note{font-size:12px;color:#60756d;line-height:1.45}
 .status{font-size:13px;margin-top:9px;min-height:18px;color:var(--green)}
@@ -104,7 +106,7 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 </style>
 </head>
 <body>
-<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.0</p></header>
+<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.1</p></header>
 <main>
 <nav class="no-print">
 <button id="tabDaily" class="secondary active">Registro diário</button>
@@ -127,6 +129,14 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 <div id="comparisons" class="note" style="margin-top:12px"></div>
 <div class="actions no-print"><button id="save">Salvar</button><button id="clear" class="secondary">Limpar campos</button></div>
 <div id="saveStatus" class="status" role="status"></div>
+</div>
+
+<div class="panel no-print">
+<details id="planBox"><summary id="planSummary" style="margin-top:0">Esquema de insulina</summary>
+<p class="note">Marque os horários e as insulinas aplicadas, conforme a prescrição médica. Cada pessoa tem o seu esquema. Se o médico mudar a prescrição, basta alterar aqui: os registros antigos são mantidos e continuam aparecendo nos relatórios.</p>
+<div id="planEditor"></div>
+<div class="actions"><button id="planDefault" class="secondary">Voltar ao padrão</button></div>
+</details>
 </div>
 
 <div class="panel">
@@ -185,33 +195,44 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 
 <script>
 "use strict";
-const APP_VERSION="5.0";
+const APP_VERSION="5.1";
 const KEY="controleGlicemia.v1";
 const UNDO_KEY="controleGlicemia.undo";
 const PEOPLE=["Carlos","Rosana"];
 const HIGH=180, VAR_LIMIT=30, BACKUP_REMIND_DAYS=7;
 const XLSX_URL="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
 
-// Medições principais. insulin:false = medição sem aplicação (a última, antes de dormir).
+// Medições principais de glicemia
 const FIELDS=[
-  {id:"antesCafe",  label:"Antes do café",    short:"Antes do café",  insulin:true},
-  {id:"posCafe",    label:"2h após o café",   short:"2h após café",   insulin:true},
-  {id:"antesAlmoco",label:"Antes do almoço",  short:"Antes do almoço",insulin:true},
-  {id:"posAlmoco",  label:"2h após o almoço", short:"2h após almoço", insulin:true},
-  {id:"antesJantar",label:"Antes do jantar",  short:"Antes do jantar",insulin:true},
-  {id:"posJantar",  label:"2h após o jantar", short:"2h após jantar", insulin:false}
+  {id:"antesCafe",  label:"Antes do café",    short:"Antes do café"},
+  {id:"posCafe",    label:"2h após o café",   short:"2h após café"},
+  {id:"antesAlmoco",label:"Antes do almoço",  short:"Antes do almoço"},
+  {id:"posAlmoco",  label:"2h após o almoço", short:"2h após almoço"},
+  {id:"antesJantar",label:"Antes do jantar",  short:"Antes do jantar"},
+  {id:"posJantar",  label:"2h após o jantar", short:"2h após jantar"}
 ];
+// Horários onde pode haver aplicação: os 6 das medições + "antes de dormir" (só aplicação, sem medição)
+const BED={id:"dormir",label:"Antes de dormir",short:"Antes de dormir",bed:true};
+const INS_SLOTS=[...FIELDS,BED];
 const INS_TYPES=[{k:"nph",label:"NPH",short:"NPH"},{k:"rap",label:"Rápida",short:"Ráp."}];
 const PAIRS=[["antesCafe","posCafe","Café"],["antesAlmoco","posAlmoco","Almoço"],["antesJantar","posJantar","Jantar"]];
 const insKey=(t,fid)=>`${t}_${fid}`;
-const INS_FIELDS=FIELDS.filter(f=>f.insulin);
-const DAY_KEYS=[...FIELDS.map(f=>f.id),...INS_FIELDS.flatMap(f=>INS_TYPES.map(t=>insKey(t.k,f.id)))];
+const ALL_INS_KEYS=INS_SLOTS.flatMap(s=>INS_TYPES.map(t=>insKey(t.k,s.id)));
+const DAY_KEYS=[...FIELDS.map(f=>f.id),...ALL_INS_KEYS];
+// Esquema padrão de aplicações (pode ser alterado pelo usuário em "Esquema de insulina", por pessoa)
+const DEFAULT_PLAN={antesCafe:["nph","rap"],antesAlmoco:["nph","rap"],antesJantar:["nph","rap"],dormir:["nph","rap"]};
+function planOf(p=currentPerson){const pl=db.meta.plans&&db.meta.plans[p];return pl&&typeof pl==="object"?pl:DEFAULT_PLAN}
+function inPlan(slotId,t,p){return (planOf(p)[slotId]||[]).includes(t)}
+// Tipos visíveis num horário: os do esquema + os que já têm valor (para nunca esconder dado antigo)
+function typesFor(slotId,p,hasValue){return INS_TYPES.filter(t=>inPlan(slotId,t.k,p)||hasValue(insKey(t.k,slotId)))}
 const POST_OF=Object.fromEntries(PAIRS.map(([a,b])=>[b,a]));
 
 const $=id=>document.getElementById(id);
 let db=loadDb();
 let currentPerson=PEOPLE.includes(db.meta.lastPerson)?db.meta.lastPerson:PEOPLE[0];
 let extrasDraft=[];
+// Pessoa/data a que os campos na tela pertencem; "loading" bloqueia eventos disparados durante o redesenho
+let formCtx={person:null,date:null},loading=false;
 
 /* ---------- utilidades ---------- */
 function emptyPerson(){return {days:{},extras:[]}}
@@ -249,25 +270,30 @@ function dayHasData(d){return DAY_KEYS.some(k=>!isNil(d[k]))}
 /* ---------- registro diário ---------- */
 function fillPeople(){const opts=PEOPLE.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");$("personSelect").innerHTML=opts;$("personSelectMonth").innerHTML=opts;$("personSelect").value=currentPerson;$("personSelectMonth").value=currentPerson}
 
-function renderInputs(){
-  $("mainMeasurements").innerHTML=FIELDS.map(f=>`<div class="measure" id="card-${f.id}">
+function insRow(slotId,types){return `<div class="ins-row">${types.map(t=>`<label>${t.label} (UI)<input type="text" inputmode="decimal" autocomplete="off" id="${insKey(t.k,slotId)}" data-ins placeholder="UI"></label>`).join("")}</div>`}
+function renderInputs(date){
+  const d=getDay(date),has=k=>!isNil(d[k]);
+  let html=FIELDS.map(f=>{const types=typesFor(f.id,currentPerson,has);return `<div class="measure" id="card-${f.id}">
     <label for="${f.id}">${f.label}</label>
     <input class="glic" type="number" min="0" step="1" inputmode="numeric" id="${f.id}" placeholder="mg/dL">
     <small>Alerta visual a partir de ${HIGH}</small>
-    ${f.insulin?`<div class="ins-row">${INS_TYPES.map(t=>`<label>${t.label} (UI)<input type="text" inputmode="decimal" autocomplete="off" id="${insKey(t.k,f.id)}" data-ins placeholder="UI"></label>`).join("")}</div>`
-      :`<small class="noins">Sem aplicação de insulina nesta medição.</small>`}
-  </div>`).join("");
-  DAY_KEYS.forEach(k=>{$(k).addEventListener("input",autoSaveMain);$(k).addEventListener("change",autoSaveMain)});
+    ${types.length?insRow(f.id,types):`<small class="noins">Sem aplicação de insulina neste horário.</small>`}
+  </div>`}).join("");
+  const bt=typesFor(BED.id,currentPerson,has);
+  if(bt.length)html+=`<div class="measure bed" id="card-${BED.id}"><label>${BED.label}</label><small class="noins">Somente aplicação (sem medição)</small>${insRow(BED.id,bt)}</div>`;
+  $("mainMeasurements").innerHTML=html;
+  $("mainMeasurements").querySelectorAll("input").forEach(el=>{el.addEventListener("input",autoSaveMain);el.addEventListener("change",autoSaveMain)});
 }
-function mainValues(){const out={};FIELDS.forEach(f=>out[f.id]=glic($(f.id).value));INS_FIELDS.forEach(f=>INS_TYPES.forEach(t=>{const k=insKey(t.k,f.id);out[k]=units($(k).value)}));return out}
+function mainValues(){const out={};FIELDS.forEach(f=>out[f.id]=glic($(f.id).value));ALL_INS_KEYS.forEach(k=>{if($(k))out[k]=units($(k).value)});return out}
 function markInvalidInsulin(){document.querySelectorAll("[data-ins]").forEach(el=>{const bad=!isNil(el.value)&&units(el.value)===null;el.style.borderColor=bad?"#d94b43":"";el.title=bad?"Valor inválido (use números, ex.: 10 ou 7,5)":""})}
 function writeMain(){
-  const date=$("recordDate").value;if(!date)return false;
-  const merged={...getDay(date),...mainValues(),updatedAt:new Date().toISOString()};
-  if(dayHasData(merged))personDb().days[date]=merged;else delete personDb().days[date];
+  const {person,date}=formCtx;if(loading||!person||!date)return false;
+  const merged={...getDay(date,person),...mainValues(),updatedAt:new Date().toISOString()};
+  if(dayHasData(merged))personDb(person).days[date]=merged;else delete personDb(person).days[date];
   return persist();
 }
 function autoSaveMain(){
+  if(loading)return;
   renderComparisons();markInvalidInsulin();
   if(writeMain()){$("saveStatus").textContent=`${currentPerson} • Salvo automaticamente • `+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});renderDayRecords();refreshMonthlyIfVisible()}
 }
@@ -279,13 +305,30 @@ function renderComparisons(){
     return `<div class="${big?"flag":""}" style="padding:5px;margin-top:3px;border-radius:5px">${n}: ${diff>0?"+":""}${diff} mg/dL ${big?`— variação superior a ${VAR_LIMIT}`:`— variação até ${VAR_LIMIT}`}</div>`}).join("");
 }
 function loadDay(date){
-  $("recordDate").value=date;const d=getDay(date);
-  FIELDS.forEach(f=>$(f.id).value=d[f.id]??"");
-  INS_FIELDS.forEach(f=>INS_TYPES.forEach(t=>{const k=insKey(t.k,f.id);$(k).value=fmtU(d[k]??null)}));
-  extrasDraft=personDb().extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||""))
-    .map(x=>({id:x.id,time:x.time||"",value:x.value??"",nph:fmtU(x.nph??null),rap:fmtU(x.rap??null),note:x.note||""}));
+  loading=true;try{loadDayInner(date)}finally{loading=false}
+  formCtx={person:currentPerson,date};
   renderExtras();renderComparisons();markInvalidInsulin();renderDayRecords();
 }
+function loadDayInner(date){
+  $("recordDate").value=date;const d=getDay(date);renderInputs(date);
+  FIELDS.forEach(f=>$(f.id).value=d[f.id]??"");
+  ALL_INS_KEYS.forEach(k=>{if($(k))$(k).value=fmtU(units(d[k]))});
+  extrasDraft=personDb().extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||""))
+    .map(x=>({id:x.id,time:x.time||"",value:x.value??"",nph:fmtU(x.nph??null),rap:fmtU(x.rap??null),note:x.note||""}));
+  $("extras").innerHTML="";
+}
+
+/* ---------- esquema de insulina ---------- */
+function renderPlan(){
+  const pl=planOf();
+  $("planSummary").textContent=`Esquema de insulina de ${currentPerson}: ${INS_SLOTS.filter(sl=>(pl[sl.id]||[]).length).map(sl=>sl.label.toLowerCase()).join(", ")||"nenhuma aplicação"}`;
+  $("planEditor").innerHTML=`<table class="plan"><thead><tr><th>Horário</th>${INS_TYPES.map(t=>`<th>${t.label}</th>`).join("")}</tr></thead><tbody>${
+    INS_SLOTS.map(sl=>`<tr><td>${esc(sl.label)}</td>${INS_TYPES.map(t=>`<td><input type="checkbox" data-slot="${sl.id}" data-t="${t.k}" ${inPlan(sl.id,t.k)?"checked":""} aria-label="${esc(t.label+" "+sl.label)}"></td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  $("planEditor").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{
+    const pl={};$("planEditor").querySelectorAll("input:checked").forEach(c=>(pl[c.dataset.slot]||(pl[c.dataset.slot]=[])).push(c.dataset.t));
+    if(!db.meta.plans)db.meta.plans={};db.meta.plans[currentPerson]=pl;persist();planChanged()}));
+}
+function planChanged(){renderPlan();loadDay($("recordDate").value);refreshMonthlyIfVisible();$("saveStatus").textContent=`Esquema de insulina de ${currentPerson} atualizado.`}
 
 /* ---------- medições/aplicações adicionais ---------- */
 function renderExtras(){
@@ -298,7 +341,7 @@ function renderExtras(){
     <button class="danger" data-remove="${i}" aria-label="Excluir">×</button>
     <input class="x-note" type="text" placeholder="Observação (ex.: antes de dormir, lanche)" value="${esc(x.note)}" data-i="${i}" data-k="note">
   </div>`).join("");
-  $("extras").querySelectorAll("input").forEach(el=>{const h=()=>{const i=+el.dataset.i;extrasDraft[i][el.dataset.k]=el.value;upsertExtra(i)};el.addEventListener("input",h);el.addEventListener("change",h)});
+  $("extras").querySelectorAll("input").forEach(el=>{const h=()=>{if(loading)return;const i=+el.dataset.i;extrasDraft[i][el.dataset.k]=el.value;upsertExtra(i)};el.addEventListener("input",h);el.addEventListener("change",h)});
   $("extras").querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{
     const i=+b.dataset.remove,item=extrasDraft[i];
     const hasData=item&&(item.time||!isNil(item.value)||!isNil(item.nph)||!isNil(item.rap));
@@ -308,10 +351,10 @@ function renderExtras(){
   }));
 }
 function upsertExtra(i){
-  const date=$("recordDate").value;const x=extrasDraft[i];if(!date||!x)return;
+  const {person,date}=formCtx;const x=extrasDraft[i];if(loading||!person||!date||!x)return;
   const rec={id:x.id,date,time:x.time,value:glic(x.value),nph:units(x.nph),rap:units(x.rap),note:x.note||"",updatedAt:new Date().toISOString()};
   const valid=rec.time&&(rec.value!==null||rec.nph!==null||rec.rap!==null);
-  const list=personDb().extras,idx=list.findIndex(e=>e.id===x.id);
+  const list=personDb(person).extras,idx=list.findIndex(e=>e.id===x.id);
   if(valid){if(idx>=0)list[idx]={...list[idx],...rec};else list.push({...rec,createdAt:rec.updatedAt})}
   else if(idx>=0)list.splice(idx,1);
   if(persist()){$("saveStatus").textContent=valid?`${currentPerson} • Registro adicional salvo`:"Registro adicional incompleto (informe horário e um valor).";renderDayRecords();refreshMonthlyIfVisible()}
@@ -319,9 +362,9 @@ function upsertExtra(i){
 
 function renderDayRecords(){
   const date=$("recordDate").value;const d=getDay(date);const rows=[];let tn=0,tr=0,hasIns=false;
-  FIELDS.forEach(f=>{const g=glic(d[f.id]);const n=f.insulin?units(d[insKey("nph",f.id)]):null,r=f.insulin?units(d[insKey("rap",f.id)]):null;
+  INS_SLOTS.forEach(f=>{const g=f.bed?null:glic(d[f.id]);const n=units(d[insKey("nph",f.id)]),r=units(d[insKey("rap",f.id)]);
     if(g===null&&n===null&&r===null)return;if(n!==null){tn+=n;hasIns=true}if(r!==null){tr+=r;hasIns=true}
-    rows.push(`<tr><td>${esc(f.label)}</td><td class="${g!==null&&g>=HIGH?"flag":""}">${g??"—"}</td><td>${fmtU(n)||"—"}</td><td>${fmtU(r)||"—"}</td></tr>`)});
+    rows.push(`<tr><td>${esc(f.label)}</td><td class="${g!==null&&g>=HIGH?"flag":""}">${f.bed?"":g??"—"}</td><td>${fmtU(n)||"—"}</td><td>${fmtU(r)||"—"}</td></tr>`)});
   personDb().extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||"")).forEach(x=>{const g=glic(x.value),n=units(x.nph),r=units(x.rap);
     if(n!==null){tn+=n;hasIns=true}if(r!==null){tr+=r;hasIns=true}
     rows.push(`<tr><td>${esc(x.time)} ${esc(x.note||"Adicional")}</td><td class="${g!==null&&g>=HIGH?"flag":""}">${g??"—"}</td><td>${fmtU(n)||"—"}</td><td>${fmtU(r)||"—"}</td></tr>`)});
@@ -335,9 +378,9 @@ function monthData(person,ym){
   const list=[];
   for(let dd=1;dd<=nDays;dd++){const date=`${ym}-${String(dd).padStart(2,"0")}`;const d=p.days[date]||{};
     const ex=p.extras.filter(x=>x.date===date).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-    const g={},ins={};FIELDS.forEach(f=>{g[f.id]=glic(d[f.id]);if(f.insulin)INS_TYPES.forEach(t=>ins[insKey(t.k,f.id)]=units(d[insKey(t.k,f.id)]))});
-    const allN=[...INS_FIELDS.map(f=>ins[insKey("nph",f.id)]),...ex.map(x=>units(x.nph))].filter(v=>v!==null);
-    const allR=[...INS_FIELDS.map(f=>ins[insKey("rap",f.id)]),...ex.map(x=>units(x.rap))].filter(v=>v!==null);
+    const g={},ins={};FIELDS.forEach(f=>g[f.id]=glic(d[f.id]));ALL_INS_KEYS.forEach(k=>ins[k]=units(d[k]));
+    const allN=[...INS_SLOTS.map(f=>ins[insKey("nph",f.id)]),...ex.map(x=>units(x.nph))].filter(v=>v!==null);
+    const allR=[...INS_SLOTS.map(f=>ins[insKey("rap",f.id)]),...ex.map(x=>units(x.rap))].filter(v=>v!==null);
     list.push({date,dow:new Date(y,m-1,dd).getDay(),g,ins,ex,totN:allN.length?round1(sum(allN)):null,totR:allR.length?round1(sum(allR)):null,
       has:dayHasData(d)||ex.length>0});
   }
@@ -355,27 +398,32 @@ function buildReport(person,ym,opt){
   const nHigh=sum(FIELDS.map(f=>days.filter(d=>d.g[f.id]!==null&&d.g[f.id]>=HIGH).length))+extraG.filter(v=>v!==null&&v>=HIGH).length;
   const hasExtraIns=extras.some(x=>units(x.nph)!==null||units(x.rap)!==null);
 
-  // Cabeçalho da tabela
+  // Colunas: glicemia de cada horário + insulina conforme esquema (ou existente no mês)
+  const cols=INS_SLOTS.map(sl=>({sl,types:showIns?typesFor(sl.id,person,k=>days.some(d=>d.ins[k]!==null)):[]})).filter(c=>!c.sl.bed||c.types.length);
   let h1=`<th rowspan="2">Dia</th>`,h2="";
-  FIELDS.forEach(f=>{const span=showIns&&f.insulin?3:1;h1+=`<th class="gs" colspan="${span}">${esc(f.short)}</th>`;h2+=`<th class="gs">mg/dL</th>`;if(showIns&&f.insulin)INS_TYPES.forEach(t=>h2+=`<th class="u">${t.short}</th>`)});
+  cols.forEach(c=>{const span=(c.sl.bed?0:1)+c.types.length;h1+=`<th class="gs${c.sl.bed?" u":""}" colspan="${span}">${esc(c.sl.short)}</th>`;
+    let first=true;if(!c.sl.bed){h2+=`<th class="gs">mg/dL</th>`;first=false}
+    c.types.forEach(t=>{h2+=`<th class="u${first?" gs":""}">${t.short}</th>`;first=false})});
   if(showIns){h1+=`<th class="gs u" colspan="2">Total dia (UI)${hasExtraIns?"*":""}</th>`;h2+=`<th class="gs u">NPH</th><th class="u">Ráp.</th>`}
   h1+=`<th class="gs" rowspan="2">Adicionais</th>`;
 
   const body=rows.map(d=>{
     let tds=`<td class="day">${d.date.slice(8)}<span>${WD[d.dow]}</span></td>`;
-    FIELDS.forEach(f=>{const v=d.g[f.id];let cls="gs",extra="";
-      if(v!==null&&v>=HIGH)cls+=" flag";
-      const pre=POST_OF[f.id];if(pre&&v!==null&&d.g[pre]!==null){const diff=v-d.g[pre];if(Math.abs(diff)>VAR_LIMIT)extra=`<span class="dv">${diff>0?"+":""}${diff}</span>`}
-      tds+=`<td class="${cls}">${v??""}${extra}</td>`;
-      if(showIns&&f.insulin)INS_TYPES.forEach(t=>tds+=`<td class="u">${fmtU(d.ins[insKey(t.k,f.id)])}</td>`)});
+    cols.forEach(c=>{let first=true;
+      if(!c.sl.bed){const f=c.sl,v=d.g[f.id];let cls="gs",extra="";
+        if(v!==null&&v>=HIGH)cls+=" flag";
+        const pre=POST_OF[f.id];if(pre&&v!==null&&d.g[pre]!==null){const diff=v-d.g[pre];if(Math.abs(diff)>VAR_LIMIT)extra=`<span class="dv">${diff>0?"+":""}${diff}</span>`}
+        tds+=`<td class="${cls}">${v??""}${extra}</td>`;first=false}
+      c.types.forEach(t=>{tds+=`<td class="u${first?" gs":""}">${fmtU(d.ins[insKey(t.k,c.sl.id)])}</td>`;first=false})});
     if(showIns)tds+=`<td class="gs u tot">${fmtU(d.totN)}</td><td class="u tot">${fmtU(d.totR)}</td>`;
     tds+=`<td class="gs ex">${d.ex.length?d.ex.map(x=>esc(x.time)+(glic(x.value)!==null?" "+glic(x.value):"")).join("; "):""}</td>`;
     return `<tr class="${[0,6].includes(d.dow)?"we":""} ${d.has?"":"empty"}">${tds}</tr>`}).join("");
 
   // Linha de médias
   let foot=`<td class="day">Média</td>`;
-  FIELDS.forEach(f=>{const s=stats(days.map(d=>d.g[f.id]));foot+=`<td class="gs">${fmtAvg(s.avg)}</td>`;
-    if(showIns&&f.insulin)INS_TYPES.forEach(t=>{const s2=stats(days.map(d=>d.ins[insKey(t.k,f.id)]));foot+=`<td class="u">${s2.n?fmtAvg(s2.avg,1):""}</td>`})});
+  cols.forEach(c=>{let first=true;
+    if(!c.sl.bed){const s=stats(days.map(d=>d.g[c.sl.id]));foot+=`<td class="gs">${fmtAvg(s.avg)}</td>`;first=false}
+    c.types.forEach(t=>{const s2=stats(days.map(d=>d.ins[insKey(t.k,c.sl.id)]));foot+=`<td class="u${first?" gs":""}">${s2.n?fmtAvg(s2.avg,1):""}</td>`;first=false})});
   if(showIns){const sn=stats(days.map(d=>d.totN)),sr=stats(days.map(d=>d.totR));foot+=`<td class="gs u">${sn.n?fmtAvg(sn.avg,1):""}</td><td class="u">${sr.n?fmtAvg(sr.avg,1):""}</td>`}
   foot+=`<td class="gs"></td>`;
 
@@ -407,7 +455,7 @@ function buildReport(person,ym,opt){
     ${insBlock}
   </div>
   ${extrasTable}
-  <div class="legend"><b class="f">123</b> glicemia ≥${HIGH} mg/dL • número pequeno abaixo do valor 2h após = diferença em relação ao “antes” quando superior a ${VAR_LIMIT} mg/dL${showIns&&hasExtraIns?" • * o total do dia inclui as aplicações adicionais":""} • a medição 2h após o jantar não tem aplicação. Critérios de organização definidos pelo usuário; não representam diagnóstico.</div>
+  <div class="legend"><b class="f">123</b> glicemia ≥${HIGH} mg/dL • número pequeno abaixo do valor 2h após = diferença em relação ao “antes” quando superior a ${VAR_LIMIT} mg/dL${showIns&&hasExtraIns?" • * o total do dia inclui as aplicações adicionais":""} • colunas de insulina conforme o esquema de aplicação configurado. Critérios de organização definidos pelo usuário; não representam diagnóstico.</div>
 </div>`;
 }
 function reportOptions(){return {allDays:$("optAllDays").checked,insulin:$("optInsulin").checked}}
@@ -432,7 +480,7 @@ async function deliverFile(blob,filename,title){
 }
 
 /* ---------- backup ---------- */
-function backupPayload(){return {app:"controle-glicemia",schema:2,version:APP_VERSION,exportedAt:new Date().toISOString(),people:db.people}}
+function backupPayload(){return {app:"controle-glicemia",schema:3,version:APP_VERSION,exportedAt:new Date().toISOString(),people:db.people,plans:db.meta.plans||{}}}
 async function exportBackup(){
   const stamp=new Date();const name=`backup-glicemia-${today()}-${String(stamp.getHours()).padStart(2,"0")}${String(stamp.getMinutes()).padStart(2,"0")}.json`;
   const ok=await deliverFile(new Blob([JSON.stringify(backupPayload(),null,2)],{type:"application/json"}),name,"Backup Controle de Glicemia");
@@ -445,7 +493,7 @@ function parseBackup(obj){
   else if(obj&&obj.days)people={[PEOPLE[0]]:{days:obj.days,extras:obj.extras||[]}};
   else throw new Error("Formato inválido");
   const clean={};PEOPLE.forEach(n=>{const p=people[n]||{};clean[n]={days:(p.days&&typeof p.days==="object")?p.days:{},extras:Array.isArray(p.extras)?p.extras:[]}});
-  return {people:clean,exportedAt:obj.exportedAt||null,version:obj.version||"anterior à 5.0"};
+  return {people:clean,plans:(obj.plans&&typeof obj.plans==="object")?obj.plans:{},exportedAt:obj.exportedAt||null,version:obj.version||"anterior à 5.0"};
 }
 function extraSig(x){return [x.date,x.time,glic(x.value),units(x.nph),units(x.rap)].join("|")}
 function mergeInto(target,incoming){
@@ -468,18 +516,18 @@ async function restoreFromFile(file,mode){
   const head=`Backup ${inc.exportedAt?"de "+fmtDateTime(inc.exportedAt):"sem data"} (versão ${inc.version})\n${summary}\n\n`;
   if(mode==="replace"){
     if(!confirm(head+"SUBSTITUIR todos os dados atuais pelos do backup?\nRegistros que existem só no aparelho serão removidos (fica uma cópia para desfazer)."))return;
-    saveUndo("substituição");db.people=normalizeDb({people:inc.people}).people;persist();afterDataChange();
+    saveUndo("substituição");db.people=normalizeDb({people:inc.people}).people;db.meta.plans={...(db.meta.plans||{}),...inc.plans};persist();afterDataChange();
     alert("Dados substituídos pelo backup.");return;
   }
   if(!confirm(head+"Mesclar com os dados atuais?\nSó serão preenchidos campos vazios; nada que já está no aparelho será alterado."))return;
-  saveUndo("mesclagem");const st=mergeInto(db,inc);normalizeDb(db);persist();afterDataChange();
+  saveUndo("mesclagem");const st=mergeInto(db,inc);Object.entries(inc.plans).forEach(([n,pl])=>{if(!db.meta.plans)db.meta.plans={};if(!db.meta.plans[n])db.meta.plans[n]=pl});normalizeDb(db);persist();afterDataChange();
   alert(`Backup mesclado.\nDias novos: ${st.daysAdded}\nValores preenchidos em dias existentes: ${st.fieldsAdded}\nRegistros adicionais incluídos: ${st.extrasAdded}\nValores diferentes mantidos como estão no aparelho: ${st.conflicts}`);
 }
 function undoRestore(){
   let u;try{u=JSON.parse(localStorage.getItem(UNDO_KEY)||"null")}catch{u=null}
   if(!u||!u.db){alert("Não há restauração para desfazer.");return}
   if(!confirm(`Voltar os dados para como estavam antes da ${u.label} de ${fmtDateTime(u.savedAt)}?`))return;
-  const meta=db.meta;db=normalizeDb(u.db);db.meta={...db.meta,lastBackupAt:meta.lastBackupAt};persist();localStorage.removeItem(UNDO_KEY);afterDataChange();alert("Restauração desfeita.");
+  const meta=db.meta;db=normalizeDb(u.db);db.meta={...db.meta,lastBackupAt:meta.lastBackupAt,lastPerson:meta.lastPerson};persist();localStorage.removeItem(UNDO_KEY);afterDataChange();alert("Restauração desfeita.");
 }
 function renderBackupInfo(){
   const last=db.meta.lastBackupAt;const c=PEOPLE.map(n=>{const k=countPerson(db.people[n]);return `${n}: ${k.days} dia(s)`}).join(" • ");
@@ -492,14 +540,14 @@ function renderBackupInfo(){
   let u=null;try{u=JSON.parse(localStorage.getItem(UNDO_KEY)||"null")}catch{}
   $("undoRestore").classList.toggle("hidden",!u);
 }
-function afterDataChange(){loadDay($("recordDate").value);refreshMonthlyIfVisible();renderBackupInfo()}
+function afterDataChange(){renderPlan();loadDay($("recordDate").value);refreshMonthlyIfVisible();renderBackupInfo()}
 
 /* ---------- Excel (carregado só quando necessário) ---------- */
 let xlsxPromise=null;
 function ensureXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);if(!xlsxPromise)xlsxPromise=new Promise((res,rej)=>{const s=document.createElement("script");s.src=XLSX_URL;s.onload=()=>res(window.XLSX);s.onerror=()=>{xlsxPromise=null;rej(new Error("xlsx"))};document.head.appendChild(s)});return xlsxPromise}
 function norm(s){return String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim()}
-const HEADER_MAP=(()=>{const m={};FIELDS.forEach(f=>{m[norm(f.label)]=f.id;if(f.insulin)INS_TYPES.forEach(t=>m[norm(`${t.label} ${f.label}`)]=insKey(t.k,f.id))});return m})();
-function excelHeader(){return ["Data",...FIELDS.map(f=>f.label),...INS_FIELDS.flatMap(f=>INS_TYPES.map(t=>`${t.label} ${f.label}`)),"Total NPH do dia","Total Rápida do dia"]}
+const HEADER_MAP=(()=>{const m={};FIELDS.forEach(f=>m[norm(f.label)]=f.id);INS_SLOTS.forEach(sl=>INS_TYPES.forEach(t=>m[norm(`${t.label} ${sl.label}`)]=insKey(t.k,sl.id)));return m})();
+function excelInsCols(person){const p=personDb(person);return INS_SLOTS.flatMap(sl=>INS_TYPES.filter(t=>inPlan(sl.id,t.k,person)||Object.values(p.days).some(d=>!isNil(d[insKey(t.k,sl.id)]))).map(t=>({k:insKey(t.k,sl.id),label:`${t.label} ${sl.label}`})))}
 async function exportExcel(){
   $("monthStatus").textContent="Preparando planilha…";
   let X;try{X=await ensureXLSX()}catch{$("monthStatus").textContent="";alert("Não foi possível carregar o gerador de Excel. Verifique a conexão com a internet.");return}
@@ -507,7 +555,8 @@ async function exportExcel(){
   if(!months.size){$("monthStatus").textContent="";alert(`Não há registros de ${currentPerson} para exportar.`);return}
   const wb=X.utils.book_new();
   [...months].sort().forEach(ym=>{const days=monthData(currentPerson,ym).filter(d=>d.has);
-    const aoa=[excelHeader(),...days.map(d=>[fmtDate(d.date),...FIELDS.map(f=>d.g[f.id]),...INS_FIELDS.flatMap(f=>INS_TYPES.map(t=>d.ins[insKey(t.k,f.id)])),d.totN,d.totR])];
+    const ic=excelInsCols(currentPerson);
+    const aoa=[["Data",...FIELDS.map(f=>f.label),...ic.map(c=>c.label),"Total NPH do dia","Total Rápida do dia"],...days.map(d=>[fmtDate(d.date),...FIELDS.map(f=>d.g[f.id]),...ic.map(c=>d.ins[c.k]),d.totN,d.totR])];
     const ws=X.utils.aoa_to_sheet(aoa);ws["!cols"]=aoa[0].map((h,i)=>({wch:i===0?11:Math.max(8,Math.min(22,h.length))}));
     X.utils.book_append_sheet(wb,ws,ym.slice(5,7)+ym.slice(0,4))});
   const ex=[...p.extras].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
@@ -544,11 +593,11 @@ async function importExcel(file){
 }
 
 /* ---------- eventos ---------- */
-function setPerson(p){currentPerson=p;db.meta.lastPerson=p;persist();$("personSelect").value=p;$("personSelectMonth").value=p;loadDay($("recordDate").value);refreshMonthlyIfVisible();$("saveStatus").textContent=`Exibindo registros de ${p}.`}
+function setPerson(p){currentPerson=p;db.meta.lastPerson=p;persist();renderPlan();$("personSelect").value=p;$("personSelectMonth").value=p;loadDay($("recordDate").value);refreshMonthlyIfVisible();$("saveStatus").textContent=`Exibindo registros de ${p}.`}
 function showTab(t){const m=t==="month";$("daily").classList.toggle("hidden",m);$("monthly").classList.toggle("hidden",!m);$("tabDaily").classList.toggle("active",!m);$("tabMonth").classList.toggle("active",m);if(m){renderMonthly();ensureXLSX().catch(()=>{})}window.scrollTo(0,0)}
 
 $("save").addEventListener("click",()=>{if(writeMain()){extrasDraft.forEach((_,i)=>upsertExtra(i));$("saveStatus").textContent=`Registros de ${currentPerson} salvos em ${fmtDate($("recordDate").value)}.`;renderDayRecords()}});
-$("clear").addEventListener("click",()=>{DAY_KEYS.forEach(k=>$(k).value="");renderComparisons();$("saveStatus").textContent="Campos limpos na tela. Os dados já salvos não foram apagados."});
+$("clear").addEventListener("click",()=>{$("mainMeasurements").querySelectorAll("input").forEach(el=>el.value="");renderComparisons();$("saveStatus").textContent="Campos limpos na tela. Os dados já salvos não foram apagados."});
 $("addExtra").addEventListener("click",()=>{extrasDraft.push({id:uid(),time:new Date().toTimeString().slice(0,5),value:"",nph:"",rap:"",note:""});renderExtras()});
 $("loadDate").addEventListener("click",()=>loadDay($("recordDate").value));
 $("recordDate").addEventListener("change",()=>loadDay($("recordDate").value));
@@ -566,11 +615,12 @@ $("backup").addEventListener("click",exportBackup);
 $("restore").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"merge");e.target.value=""});
 $("restoreReplace").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"replace");e.target.value=""});
 $("undoRestore").addEventListener("click",undoRestore);
+$("planDefault").addEventListener("click",()=>{if(!confirm(`Voltar o esquema de ${currentPerson} ao padrão (NPH e Rápida antes do café, do almoço, do jantar e antes de dormir)?`))return;if(db.meta.plans)delete db.meta.plans[currentPerson];persist();planChanged()});
 $("excelImport").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await importExcel(f);e.target.value=""});
 window.addEventListener("beforeprint",()=>{if($("monthPicker").value)renderMonthly()});
 
 /* ---------- início ---------- */
-fillPeople();renderInputs();
+fillPeople();renderPlan();
 $("recordDate").value=today();$("monthPicker").value=today().slice(0,7);
 loadDay(today());renderBackupInfo();
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
