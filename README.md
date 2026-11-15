@@ -88,3 +88,9 @@ A versão atual adiciona carregamento automático ao selecionar a data e salvame
   - Motivo: no app instalado na tela de início, o iOS não abre o diálogo de impressão da página, e a “nova aba” gerava uma página HTML, formato que apps de impressora como o HP Smart não aceitam.
 - Mesmo layout do relatório anterior: A4 paisagem, mês completo, destaques, médias, resumo por horário, insulina por horário e total, e medições adicionais. Páginas numeradas.
 - “Imprimir pelo navegador” continua disponível para uso no computador.
+
+## Versão 5.3
+- Backup manual simplificado para o OneDrive (via “Salvar em Arquivos”), sem login nem cadastro na Microsoft.
+- Aviso de backup configurável: todo dia (padrão), a cada 3 ou a cada 7 dias. O aviso tem o botão “Fazer backup agora”.
+- Um arquivo por dia (backup-glicemia-AAAA-MM-DD.json): salvar de novo no mesmo dia substitui o arquivo, e os dias anteriores ficam como histórico.
+- Passo a passo “Como salvar no OneDrive (primeira vez)” no próprio app.

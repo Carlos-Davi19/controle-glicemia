@@ -106,7 +106,7 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 </style>
 </head>
 <body>
-<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.2</p></header>
+<header><h1>Controle de Glicemia</h1><p>Glicemia em mg/dL • Insulina em UI • Versão 5.3</p></header>
 <main>
 <nav class="no-print">
 <button id="tabDaily" class="secondary active">Registro diário</button>
@@ -173,6 +173,17 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 <div class="panel no-print" id="backupPanel">
 <h2>Backup e dados</h2>
 <p class="note" id="backupInfo"></p>
+<div class="datebar" style="margin:8px 0"><label for="remindDays" class="note" style="margin:0">Lembrar de fazer backup:</label>
+<select id="remindDays"><option value="1">todo dia</option><option value="3">a cada 3 dias</option><option value="7">a cada 7 dias</option></select></div>
+<details><summary>Como salvar no OneDrive (primeira vez)</summary>
+<ol class="note" style="padding-left:18px;margin:8px 0">
+<li>Toque em <strong>Exportar backup</strong>.</li>
+<li>No menu Compartilhar, escolha <strong>Salvar em Arquivos</strong>.</li>
+<li>Toque em <strong>Procurar</strong> e escolha <strong>OneDrive</strong> (se não aparecer: Procurar → ⋯ → Editar e ative o OneDrive; é preciso ter o app OneDrive instalado e conectado).</li>
+<li>Crie uma pasta, por exemplo <em>Backups Glicemia</em>, e toque em <strong>Salvar</strong>.</li>
+</ol>
+<p class="note">Nas próximas vezes o iPhone já abre na última pasta usada: é só tocar em Salvar. Um arquivo por dia (ex.: backup-glicemia-2026-11-15.json); se salvar de novo no mesmo dia, escolha <strong>Substituir</strong>. O arquivo contém os dados das duas pessoas.</p>
+</details>
 <div class="actions">
 <button id="backup">Exportar backup</button>
 <label class="btn secondary">Restaurar backup<input id="restore" type="file" accept=".json,application/json" hidden></label>
@@ -196,11 +207,11 @@ details summary{cursor:pointer;font-size:13px;color:#17483d;font-weight:600;marg
 
 <script>
 "use strict";
-const APP_VERSION="5.2";
+const APP_VERSION="5.3";
 const KEY="controleGlicemia.v1";
 const UNDO_KEY="controleGlicemia.undo";
 const PEOPLE=["Carlos","Rosana"];
-const HIGH=180, VAR_LIMIT=30, BACKUP_REMIND_DAYS=7;
+const HIGH=180, VAR_LIMIT=30;
 const XLSX_URL="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
 
 // Medições principais de glicemia
@@ -641,7 +652,7 @@ async function deliverFile(blob,filename,title){
 /* ---------- backup ---------- */
 function backupPayload(){return {app:"controle-glicemia",schema:3,version:APP_VERSION,exportedAt:new Date().toISOString(),people:db.people,plans:db.meta.plans||{}}}
 async function exportBackup(){
-  const stamp=new Date();const name=`backup-glicemia-${today()}-${String(stamp.getHours()).padStart(2,"0")}${String(stamp.getMinutes()).padStart(2,"0")}.json`;
+  const name=`backup-glicemia-${today()}.json`; // um arquivo por dia: salvar de novo no mesmo dia substitui
   const ok=await deliverFile(new Blob([JSON.stringify(backupPayload(),null,2)],{type:"application/json"}),name,"Backup Controle de Glicemia");
   if(ok){db.meta.lastBackupAt=new Date().toISOString();persist();renderBackupInfo()}
 }
@@ -692,9 +703,10 @@ function renderBackupInfo(){
   const last=db.meta.lastBackupAt;const c=PEOPLE.map(n=>{const k=countPerson(db.people[n]);return `${n}: ${k.days} dia(s)`}).join(" • ");
   $("backupInfo").innerHTML=`Último backup exportado neste aparelho: <strong>${last?esc(fmtDateTime(last)):"nunca"}</strong><br>${esc(c)}`;
   const hasData=PEOPLE.some(n=>countPerson(db.people[n]).days>0);
-  const age=last?(Date.now()-new Date(last).getTime())/864e5:Infinity;
+  const remind=[1,3,7].includes(+db.meta.remindDays)?+db.meta.remindDays:1;$("remindDays").value=String(remind);
+  let dd=Infinity;if(last){const a=new Date(last),t=new Date();dd=Math.round((new Date(t.getFullYear(),t.getMonth(),t.getDate())-new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5)}
   const b=$("backupBanner");
-  if(hasData&&age>BACKUP_REMIND_DAYS){b.innerHTML=`<span>${last?`Último backup há ${Math.floor(age)} dias.`:"Nenhum backup exportado ainda."} Os dados existem só neste aparelho.</span><button id="bannerBackup">Fazer backup agora</button>`;b.classList.remove("hidden");$("bannerBackup").onclick=exportBackup}
+  if(hasData&&dd>=remind){b.innerHTML=`<span>${!last?"Nenhum backup feito ainda.":dd===1?"Último backup: ontem.":`Último backup há ${dd} dias.`} Os dados existem só neste aparelho.</span><button id="bannerBackup">Fazer backup agora</button>`;b.classList.remove("hidden");$("bannerBackup").onclick=exportBackup}
   else b.classList.add("hidden");
   let u=null;try{u=JSON.parse(localStorage.getItem(UNDO_KEY)||"null")}catch{}
   $("undoRestore").classList.toggle("hidden",!u);
@@ -771,6 +783,7 @@ $("printMonth").addEventListener("click",printMonth);
 $("sharePdf").addEventListener("click",sharePdf);
 $("exportExcel").addEventListener("click",exportExcel);
 $("backup").addEventListener("click",exportBackup);
+$("remindDays").addEventListener("change",e=>{db.meta.remindDays=+e.target.value;persist();renderBackupInfo()});
 $("restore").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"merge");e.target.value=""});
 $("restoreReplace").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await restoreFromFile(f,"replace");e.target.value=""});
 $("undoRestore").addEventListener("click",undoRestore);
